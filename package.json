@@ -1,22 +1,49 @@
 {
   "name": "sectorball",
+  "private": true,
   "version": "1.0.0",
+  "type": "module",
   "description": "",
-  "main": "index.js",
+  "workspaces": [
+    "game",
+    "api"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "concurrently -n api,game -c blue,green \"npm run dev -w api\" \"npm run dev -w game\"",
+    "dev:api": "npm run dev -w api",
+    "dev:game": "npm run dev -w game",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces",
+    "lint": "npm run lint --workspaces",
+    "test": "npm run test --workspaces",
+    "prepare": "husky"
+  },
+  "engines": {
+    "node": ">=22.18"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/tzs007/sectorball.git"
   },
-  "author": "Zsolt Takács",
+  "author": "Zsolt Takács",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/tzs007/sectorball/issues"
   },
   "homepage": "https://github.com/tzs007/sectorball#readme",
-  "dependencies": {
-    "pixi.js": "^8.22.0"
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "concurrently": "^10.0.6",
+    "eslint": "^10.13.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "globals": "^17.13.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.71.2"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": "eslint --fix --max-warnings=0"
   }
 }
