@@ -6,7 +6,9 @@ description: Use when writing or reviewing any TypeScript / ES6+ code in this pr
 # TypeScript / ES6+
 
 ## Rules
-- `tsconfig.json` runs with `"strict": true` (plus `noUncheckedIndexedAccess`, `noImplicitOverride`). Never loosen it to make code compile.
+- TypeScript `~6.0.x` (pinned for typescript-eslint, see `eslint`). Strict options live in the root
+  `tsconfig.base.json` (`strict`, `noUncheckedIndexedAccess`, `noImplicitOverride`, ...); workspaces extend it.
+  Never loosen them to make code compile.
 - ES modules only (`import` / `export`). Prefer named exports; avoid default exports.
 - `const` by default, `let` only when reassigned, never `var`.
 - Arrow functions for callbacks and small helpers; `function` declarations are fine for top-level named functions.
@@ -47,4 +49,4 @@ const assertNever = (x: never): never => { throw new Error(`Unexpected: ${JSON.s
 - `// @ts-ignore` (use `// @ts-expect-error` with a comment if truly needed).
 - Mutating function arguments.
 
-Related: [[solid]], [[kiss]].
+Related: [[solid]], [[kiss]], [[eslint]], [[vitest-tdd]].

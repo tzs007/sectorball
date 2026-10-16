@@ -42,6 +42,8 @@ const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(URL, { aut
 - Authenticate in a middleware (`io.use(...)`) via `socket.handshake.auth`, store user data in `socket.data`.
 - **Cleanup:** remove listeners with `socket.off(event, handler)` when a UI component/page is destroyed;
   avoid registering the same listener twice.
+- Server: attach Socket.IO to the same `http` server as Express (see `expressjs`). Socket handlers in
+  `api/src/sockets/` call the same services as the HTTP controllers (see `mvc-crud`).
 - Keep socket code in a transport/service layer; game logic and rendering/UI code must not import `socket.io-client`
   directly (see `solid`, `atomic-design`).
 

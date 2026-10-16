@@ -18,13 +18,15 @@ Build UI from small, reusable pieces composed upward. Applies to DOM / React com
 
 ## Folder structure
 ```
-src/ui/
-  atoms/
-  molecules/
-  organisms/
-  templates/
+game/src/
+  components/
+    atoms/
+    molecules/
+    organisms/
+    templates/
   pages/
 ```
+Full SPA layout: see the `react` skill.
 One component per file (or folder with `index.ts`), named after the component.
 
 ## Rules

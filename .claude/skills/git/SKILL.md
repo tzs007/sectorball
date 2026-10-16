@@ -16,7 +16,8 @@ description: Use when committing, branching, writing commit messages, or prepari
   ```
   Types: `feat`, `fix`, `refactor`, `perf`, `test`, `docs`, `style`, `build`, `ci`, `chore`.
 - Small, atomic commits: one logical change per commit; the build should pass at every commit.
-- Before committing: run type-check, lint and tests if they exist; review `git diff --staged`.
+- Before committing review `git diff --staged`. The husky pre-commit hook runs lint-staged, typecheck and
+  tests — a failing hook means fix the cause, never bypass it (see `husky`).
 - Stage files explicitly (`git add <path>`); avoid `git add -A` so secrets/build output are not committed.
 - Never commit `.env`, credentials, `node_modules`, or build output — keep `.gitignore` up to date.
 - Never force-push to `main`. On feature branches prefer `--force-with-lease`.
@@ -30,4 +31,4 @@ fix(socket): rejoin room after reconnect
 refactor(player): extract movement into PlayerController
 ```
 
-Related: [[kiss]].
+Related: [[kiss]], [[husky]].
