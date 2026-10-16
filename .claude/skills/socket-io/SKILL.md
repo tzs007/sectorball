@@ -42,7 +42,7 @@ const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(URL, { aut
 - Authenticate in a middleware (`io.use(...)`) via `socket.handshake.auth`, store user data in `socket.data`.
 - **Cleanup:** remove listeners with `socket.off(event, handler)` when a UI component/page is destroyed;
   avoid registering the same listener twice.
-- Keep socket code in a transport/service layer; game logic and Konva views must not import `socket.io-client`
+- Keep socket code in a transport/service layer; game logic and rendering/UI code must not import `socket.io-client`
   directly (see `solid`, `atomic-design`).
 
 ## Avoid

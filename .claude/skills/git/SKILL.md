@@ -25,7 +25,7 @@ description: Use when committing, branching, writing commit messages, or prepari
 
 ## Examples
 ```
-feat(board): render sector grid with Konva
+feat(board): render sector grid on canvas
 fix(socket): rejoin room after reconnect
 refactor(player): extract movement into PlayerController
 ```

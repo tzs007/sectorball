@@ -19,16 +19,16 @@ authoritative source.
   - socket event names and payload types → one shared `events.ts` used by client and server (see `socket-io`)
   - domain types → shared types module
 - Derive instead of duplicating: `type Keys = keyof typeof CONFIG`, `as const` arrays → union types.
-- Extract repeated Konva node setup into factories / atoms (see `atomic-design`).
+- Extract repeated rendering/UI setup into factories / atoms (see `atomic-design`).
 
 ## Example
 ```ts
 // Before: magic numbers repeated across files
-// new Konva.Circle({ radius: 12, fill: '#ff5722' })
+// new Graphics().circle(0, 0, 12).fill('#ff5722')
 
 // After
 export const BALL = { radius: 12, fill: '#ff5722' } as const;
-new Konva.Circle({ ...BALL, x, y });
+new Graphics().circle(0, 0, BALL.radius).fill(BALL.fill);
 ```
 
 ## Avoid

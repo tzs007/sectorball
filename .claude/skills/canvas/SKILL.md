@@ -5,8 +5,8 @@ description: Use when working with the HTML5 Canvas 2D API directly — renderin
 
 # HTML5 Canvas (2D)
 
-Prefer Konva (see the `konva` skill) for interactive scene graphs. Use the raw Canvas API for low-level
-custom rendering (e.g. inside a `Konva.Shape` `sceneFunc`, or a dedicated background/particle canvas).
+Game rendering in this project uses **PixiJS v8** (start with the `pixijs` skill). Use the raw Canvas 2D API only
+for small standalone needs (e.g. generating a texture on an offscreen canvas, simple DOM-side previews).
 
 ## Rules
 - **HiDPI:** size the backing store by `devicePixelRatio`, keep CSS size in logical pixels, then `ctx.scale(dpr, dpr)`.
@@ -59,4 +59,4 @@ export const startLoop = (frame: (dtMs: number) => void): (() => void) => {
 - Reading pixels (`getImageData`) every frame.
 - Creating gradients/patterns/paths inside the hot loop when they could be cached.
 
-Related: [[konva]], [[typescript]].
+Related: [[pixijs]], [[typescript]], [[atomic-design]].

@@ -17,7 +17,6 @@
   },
   "homepage": "https://github.com/tzs007/sectorball#readme",
   "dependencies": {
-    "konva": "^10.9.0",
-    "react-konva": "^19.3.2"
+    "pixi.js": "^8.22.0"
   }
 }

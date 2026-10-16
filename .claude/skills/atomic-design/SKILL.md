@@ -1,16 +1,16 @@
 ---
 name: atomic-design
-description: Use when creating, organising or placing UI / visual components (DOM or Konva) — atoms, molecules, organisms, templates, pages.
+description: Use when creating, organising or placing UI / visual components (DOM / React or PixiJS) — atoms, molecules, organisms, templates, pages.
 ---
 
 # Atomic design pattern
 
-Build UI from small, reusable pieces composed upward. Applies to DOM components **and** Konva visual components.
+Build UI from small, reusable pieces composed upward. Applies to DOM / React components **and** PixiJS display objects.
 
 ## Levels
 | Level | What it is | Examples |
 |---|---|---|
-| **atoms** | Smallest building block, no domain logic, configured via props | `Button`, `Label`, `Icon`; Konva: `BallShape`, `TextLabel` |
+| **atoms** | Smallest building block, no domain logic, configured via props | `Button`, `Label`, `Icon`; PixiJS: `createBall`, `createLabel` |
 | **molecules** | A few atoms working together as one unit | `ScoreBadge` (icon + label), `PlayerToken` (circle + name) |
 | **organisms** | Self-contained, meaningful section | `Scoreboard`, `Pitch` / `SectorGrid`, `ChatPanel` |
 | **templates** | Layout of organisms with placeholder content, no real data | `GameLayout`, `LobbyLayout` |
@@ -33,21 +33,26 @@ One component per file (or folder with `index.ts`), named after the component.
 - Atoms and molecules are presentational: input via props/options, output via callbacks/events.
   No direct socket or global state access below the organism/page level.
 - Only pages (and possibly organisms) talk to sockets / stores.
-- Each component exposes a `destroy()`/dispose to clean up its nodes and listeners (see `konva`).
+- Each component exposes a `destroy()`/dispose to clean up its resources and listeners (PixiJS: `destroy({ children: true })`).
 - Don't force a level: if unsure between molecule and organism, pick the simpler one ([[kiss]]).
 
-## Example (Konva)
+## Example (PixiJS)
 ```ts
-// atoms/BallShape.ts
-export const createBallShape = ({ x, y, radius, fill }: BallProps): Konva.Circle =>
-  new Konva.Circle({ x, y, radius, fill, listening: false });
+import { Container, Graphics, Text } from 'pixi.js';
 
-// molecules/PlayerToken.ts
-export const createPlayerToken = ({ name, color, x, y }: PlayerTokenProps): Konva.Group => {
-  const group = new Konva.Group({ x, y });
-  group.add(createBallShape({ x: 0, y: 0, radius: 16, fill: color }), createTextLabel({ text: name, y: 20 }));
-  return group;
+// atoms/createBall.ts
+export const createBall = ({ radius, fill }: BallProps): Graphics =>
+  new Graphics().circle(0, 0, radius).fill(fill);
+
+// molecules/createPlayerToken.ts
+export const createPlayerToken = ({ name, color, x, y }: PlayerTokenProps): Container => {
+  const token = new Container({ x, y });
+  const label = new Text({ text: name, style: { fontSize: 12, fill: '#fff' } });
+  label.anchor.set(0.5, 0);
+  label.y = 20;
+  token.addChild(createBall({ radius: 16, fill: color }), label);
+  return token;
 };
 ```
 
-Related: [[solid]], [[dry]], [[konva]].
+Related: [[solid]], [[dry]], [[pixijs]].

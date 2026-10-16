@@ -6,10 +6,10 @@ description: Use when designing modules, classes or interfaces, or refactoring c
 # SOLID principles (TypeScript)
 
 ## S — Single Responsibility
-A module/class has one reason to change. Separate **game logic**, **rendering** (Konva) and **networking** (Socket.IO).
+A module/class has one reason to change. Separate **game logic**, **rendering** (PixiJS) and **networking** (Socket.IO).
 ```ts
 class BallPhysics { step(ball: Ball, dt: number): Ball { /* ... */ } }   // logic
-class BallView    { render(ball: Ball): void { /* Konva */ } }            // rendering
+class BallView    { render(ball: Ball): void { /* PixiJS */ } }            // rendering
 ```
 
 ## O — Open/Closed
