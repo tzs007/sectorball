@@ -1,0 +1,22 @@
+{
+  "name": "sectorball",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tzs007/sectorball.git"
+  },
+  "author": "Zsolt Takács",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tzs007/sectorball/issues"
+  },
+  "homepage": "https://github.com/tzs007/sectorball#readme",
+  "dependencies": {
+    "pixi.js": "^8.22.0"
+  }
+}
