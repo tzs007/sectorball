@@ -1,4 +1,4 @@
-import { SHOT, TIMING, declareShot } from '@sectorball/shared';
+import { SHOT, TIMING, createGame, declareShot } from '@sectorball/shared';
 import type { GameState, MatchView, PlayerInfo } from '@sectorball/shared';
 import type * as Shared from '@sectorball/shared';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -12,7 +12,7 @@ import { createMatchService } from './matchService.ts';
 // passes through to the engine; single tests override one result
 vi.mock('@sectorball/shared', async (importOriginal) => {
   const actual = await importOriginal<typeof Shared>();
-  return { ...actual, declareShot: vi.fn(actual.declareShot) };
+  return { ...actual, createGame: vi.fn(actual.createGame), declareShot: vi.fn(actual.declareShot) };
 });
 
 afterEach(() => {
@@ -180,6 +180,33 @@ describe('matchService', () => {
     expect(stateOf(next).seq).toBeGreaterThan(seq);
     expect(replay.frames.length).toBeGreaterThan(0);
     expect(service.get(id).state).toEqual(next.state);
+  });
+
+  it('plays a declared shot: declare, keeper setup, confirm, shoot', async () => {
+    // open play with the ball in the away half, where home may declare a shot
+    const actual = await vi.importActual<typeof Shared>('@sectorball/shared');
+    vi.mocked(createGame).mockImplementationOnce((input) => ({
+      ...actual.createGame(input),
+      restart: null,
+      ball: { x: 700, y: 320 },
+    }));
+    const { service, id } = await liveMatch();
+
+    const declared = stateOf(await service.declareShot(id, 'alice', 0));
+    expect(declared).toMatchObject({ phase: 'keeperSetup', turn: 'away', seq: 1 });
+
+    const moved = stateOf(service.moveKeeper(id, 'bob', 300));
+    expect(moved).toMatchObject({ phase: 'keeperSetup', turn: 'away', seq: 1 });
+    expect(moved.pieces.find((p) => p.id === 'away-gk')?.pos.y).toBe(300);
+
+    const confirmed = stateOf(await service.confirmKeeper(id, 'bob', 1));
+    expect(confirmed).toMatchObject({ phase: 'aiming', turn: 'home', shotDeclared: true, seq: 2 });
+    expect(confirmed.pieces.find((p) => p.id === 'away-gk')?.pos.y).toBe(300);
+
+    const { view, replay } = await service.shoot(id, 'alice', { seq: 2, pieceId: 'home-1', pull: PULL });
+    expect(stateOf(view).seq).toBeGreaterThan(2);
+    expect(replay.frames.length).toBeGreaterThan(0);
+    expect(service.get(id).state).toEqual(view.state);
   });
 
   it('rejects actions with a stale seq', async () => {
