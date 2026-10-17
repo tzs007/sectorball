@@ -37,7 +37,7 @@ export const createApp = (deps: AppDeps) => {
   app.use('/api/matches', createMatchesRouter(deps.matches, deps.sessions));
 
   app.use('/api', (_req, res) => {
-    res.status(404).json({ error: 'Not found' });
+    res.status(404).json({ error: 'notFound' });
   });
 
   const onError: ErrorRequestHandler = (err, _req, res, _next) => {

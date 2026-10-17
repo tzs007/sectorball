@@ -17,6 +17,6 @@ describe('createApp', () => {
     const res = await request(app).get('/api/does-not-exist');
 
     expect(res.status).toBe(404);
-    expect(res.body).toEqual({ error: 'Not found' });
+    expect(res.body).toEqual({ error: 'notFound' });
   });
 });

@@ -6,7 +6,7 @@ export const validateBody =
   (schema: z.ZodType): RequestHandler =>
   (req, _res, next) => {
     const result = schema.safeParse(req.body);
-    if (!result.success) throw new ValidationError(result.error.issues[0]?.message ?? 'invalidBody');
+    if (!result.success) throw new ValidationError('invalidBody');
     req.body = result.data;
     next();
   };

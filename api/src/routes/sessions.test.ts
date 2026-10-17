@@ -30,6 +30,10 @@ describe('sessions routes', () => {
   it('rejects invalid bodies with 400', async () => {
     const wrongType = await request(app).post('/api/sessions').send({ nickname: 5 });
     expect(wrongType.status).toBe(400);
+    expect(wrongType.body).toEqual({ error: 'invalidBody' });
+    const missing = await request(app).post('/api/sessions').send({});
+    expect(missing.status).toBe(400);
+    expect(missing.body).toEqual({ error: 'invalidBody' });
     const tooShort = await request(app).post('/api/sessions').send({ nickname: 'a' });
     expect(tooShort.status).toBe(400);
     expect(tooShort.body).toEqual({ error: 'invalidNickname' });
