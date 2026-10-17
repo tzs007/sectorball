@@ -50,7 +50,7 @@ describe('matches routes', () => {
     expect((fetched.body as MatchView).status).toBe('live');
   });
 
-  it('rejects joining your own match and joining a full match', async () => {
+  it('rejects joining your own match and joining a full match, but not a repeat join', async () => {
     const { app, guest } = setup();
     const a = await guest('Alice');
     const b = await guest('Bob');
@@ -62,6 +62,9 @@ describe('matches routes', () => {
     expect(own.body).toEqual({ error: 'ownMatch' });
 
     await request(app).post(`/api/matches/${id}/join`).set('Authorization', b);
+    const again = await request(app).post(`/api/matches/${id}/join`).set('Authorization', b);
+    expect(again.status).toBe(200);
+    expect((again.body as MatchView).status).toBe('live');
     const full = await request(app).post(`/api/matches/${id}/join`).set('Authorization', c);
     expect(full.status).toBe(409);
     expect(full.body).toEqual({ error: 'matchFull' });

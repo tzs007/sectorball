@@ -141,6 +141,18 @@ describe('matchService', () => {
     await expect(service.join(id, carol)).rejects.toThrow(new ConflictError('matchFull'));
   });
 
+  it('returns the current view when the away player joins again', async () => {
+    const onChange = vi.fn<(view: MatchView) => void>();
+    const { service, alice, bob } = await setup({}, onChange);
+    const { id } = await service.create(alice);
+    const joined = await service.join(id, bob);
+
+    const again = await service.join(id, bob);
+
+    expect(again).toEqual(joined);
+    expect(onChange).toHaveBeenCalledOnce();
+  });
+
   it('rejects joining your own match', async () => {
     const { service, alice } = await setup();
     const { id } = await service.create(alice);

@@ -183,6 +183,8 @@ export const createMatchService = (deps: {
     async join(matchId, player) {
       const m = find(matchId);
       if (m.home.id === player.id) throw new ConflictError('ownMatch');
+      // a repeated join (double click, reload) by the seated player is harmless
+      if (m.away?.id === player.id) return viewOf(m);
       if (m.status !== 'open') throw new ConflictError('matchFull');
       // claim the seat before awaiting so a concurrent join sees the match full
       m.away = copyOf(player);
