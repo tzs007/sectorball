@@ -15,6 +15,6 @@ export interface MatchRepository {
   create(m: MatchRecord): Promise<void>;
   markLive(id: string, awayPlayerId: string): Promise<void>;
   finish(id: string, score: Record<Team, number>, finishedAt: string): Promise<void>;
-  /** Marks every `live` match `abandoned` (on startup); returns how many changed. */
-  abandonLive(): Promise<number>;
+  /** Marks every `open` or `live` match `abandoned` (on startup); returns how many changed. */
+  abandonUnfinished(): Promise<number>;
 }

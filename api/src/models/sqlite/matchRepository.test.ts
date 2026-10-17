@@ -47,15 +47,17 @@ describe('sqlite match repository', () => {
     });
   });
 
-  it('marks live matches abandoned on startup', async () => {
+  it('marks open and live matches abandoned on startup', async () => {
     const { matches, statusOf } = await setup();
+    await matches.create(record('open'));
     await matches.create(record('live'));
     await matches.markLive('live', 'p2');
     await matches.create(record('done'));
     await matches.markLive('done', 'p2');
     await matches.finish('done', { home: 0, away: 0 }, CREATED);
 
-    expect(await matches.abandonLive()).toBe(1);
+    expect(await matches.abandonUnfinished()).toBe(2);
+    expect(statusOf('open')).toBe('abandoned');
     expect(statusOf('live')).toBe('abandoned');
     expect(statusOf('done')).toBe('finished');
   });

@@ -16,7 +16,7 @@ const players = createSqlitePlayerRepository(db);
 const sessions = createSessionService({ players, now: () => new Date() });
 
 const matchRepository = createSqliteMatchRepository(db);
-await matchRepository.abandonLive();
+await matchRepository.abandonUnfinished();
 const matches = createMatchService({ matches: matchRepository, now: Date.now, random: Math.random });
 
 const httpServer = createServer(createApp({ sessions, matches }));

@@ -11,7 +11,7 @@ export const createSqliteMatchRepository = (db: DatabaseSync): MatchRepository =
     `UPDATE matches SET status = 'finished', home_score = $home, away_score = $away, finished_at = $finishedAt
      WHERE id = $id`,
   );
-  const abandon = db.prepare("UPDATE matches SET status = 'abandoned' WHERE status = 'live'");
+  const abandonAll = db.prepare("UPDATE matches SET status = 'abandoned' WHERE status IN ('open', 'live')");
 
   return {
     create(m) {
@@ -26,8 +26,8 @@ export const createSqliteMatchRepository = (db: DatabaseSync): MatchRepository =
       finished.run({ id, home: score.home, away: score.away, finishedAt });
       return Promise.resolve();
     },
-    abandonLive() {
-      return Promise.resolve(Number(abandon.run().changes));
+    abandonUnfinished() {
+      return Promise.resolve(Number(abandonAll.run().changes));
     },
   };
 };
