@@ -1,4 +1,4 @@
-import { defendedSide, isInPenaltyArea, ownerOfSide } from './field.ts';
+import { clampToField, defendedSide, isInPenaltyArea, ownerOfSide } from './field.ts';
 import type { Contact, SimResult } from './physics.ts';
 import { other } from './types.ts';
 import type { Decision, GameState, Piece, Side, Team } from './types.ts';
@@ -26,11 +26,13 @@ const judgeFoul = (state: GameState, shooter: Piece, sim: SimResult): Decision |
     if (otherId === BALL) return null;
     const victim = state.pieces.find((p) => p.id === otherId);
     if (victim?.kind === 'button' && victim.team !== shooter.team) {
+      // a contact just behind the goal line counts at the line (inside the goal mouth: in the area)
+      const at = clampToField(c.at);
       return {
         kind: 'foul',
         awardedTo: other(shooter.team),
-        at: c.at,
-        penalty: isInPenaltyArea(c.at, defendedSide(shooter.team, state.half)),
+        at,
+        penalty: isInPenaltyArea(at, defendedSide(shooter.team, state.half)),
       };
     }
   }

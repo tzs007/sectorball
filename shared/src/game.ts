@@ -2,7 +2,7 @@ import { applyDecision, centerSpot, kickoffPieces } from "./applyDecision.ts";
 import { SHOT, TIMING } from "./constants.ts";
 import { clampKeeperY, isInAttackingHalf } from "./field.ts";
 import type { Vec } from "./geometry.ts";
-import { isFiniteVec, length, vec } from "./geometry.ts";
+import { length, vec } from "./geometry.ts";
 import { shotVelocity, simulate } from "./physics.ts";
 import { judgeShot } from "./referee.ts";
 import { other } from "./types.ts";
@@ -174,7 +174,9 @@ export const shoot = (
   if (error) return fail(error);
   const shooter = state.pieces.find((p) => p.id === pieceId);
   if (!shooter || !canShoot(state, team, pieceId)) return fail("invalidPiece");
-  if (!isFiniteVec(pull) || length(pull) < SHOT.minPull)
+  // NaN/Infinity components, or finite ones whose length overflows, give a non-finite length
+  const pullLength = length(pull);
+  if (!Number.isFinite(pullLength) || pullLength < SHOT.minPull)
     return fail("invalidPull");
 
   const sim = simulate(state.pieces, state.ball, pieceId, shotVelocity(pull));

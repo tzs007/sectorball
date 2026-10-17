@@ -76,6 +76,16 @@ describe('judgeShot', () => {
       expect(decision).toMatchObject({ kind: 'foul', awardedTo: 'away', penalty: true });
     });
 
+    it('moves a foul just behind the goal line into the field, inside the goal mouth a penalty', () => {
+      const sim = fakeSim({ contacts: [contact('home-1', 'away-1', -5, 320)] });
+      expect(judgeShot(baseState(), shooter, sim)).toEqual({
+        kind: 'foul',
+        awardedTo: 'away',
+        at: vec(0, 320),
+        penalty: true,
+      });
+    });
+
     it('is not a penalty in the box of the other half', () => {
       const sim = fakeSim({ contacts: [contact('home-1', 'away-1', 100, 320)] });
       expect(judgeShot(baseState({ half: 2 }), shooter, sim)).toMatchObject({ kind: 'foul', penalty: false });

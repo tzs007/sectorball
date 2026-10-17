@@ -125,6 +125,13 @@ describe("shoot", () => {
     expect(shoot(state, "home", "home-2", vec(0, 10_000), 1).ok).toBe(true);
   });
 
+  it("rejects a pull whose length overflows to infinity", () => {
+    const state = game({ restart: null });
+    expect(
+      errorOf(shoot(state, "home", "home-2", vec(1.7e308, 1.7e308), 1)),
+    ).toBe("invalidPull");
+  });
+
   it("rejects shots out of turn, with invalid pieces, in the wrong phase and after full time", () => {
     const state = game();
     expect(errorOf(shoot(state, "away", "away-1", MIN_PULL, 1))).toBe(
@@ -270,6 +277,30 @@ describe("shoot", () => {
     expect(next.restart).toEqual({ kind: "throwIn" });
     expect(next.ball.y).toBe(640);
     expect(next.pieces.every((p) => p.pos.y <= 640)).toBe(true);
+  });
+
+  it("awards a corner when the defender last touches the ball over its own goal line", () => {
+    const state = game({
+      turn: "away",
+      restart: null,
+      ball: vec(950, 100),
+      pieces: [
+        piece("away-1", 900, 100),
+        piece("home-gk", 9, 320),
+        piece("away-gk", 991, 320),
+      ],
+    });
+    const { state: next } = unwrap(
+      shoot(state, "away", "away-1", vec(-160, 0), 1),
+    );
+    expect(next.lastDecision).toMatchObject({
+      kind: "out",
+      restart: "corner",
+      awardedTo: "home",
+    });
+    expect(next.restart).toEqual({ kind: "corner" });
+    expect(next.turn).toBe("home");
+    expect(next.ball).toEqual({ x: 990, y: 10 });
   });
 
   it("turns a foul in the own penalty area into a penalty with keeper setup for the fouling team", () => {
