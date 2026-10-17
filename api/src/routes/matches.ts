@@ -11,5 +11,6 @@ export const createMatchesRouter = (matches: MatchService, sessions: SessionServ
     .get('/', controller.list)
     .post('/', controller.create)
     .post('/:id/join', controller.join)
-    .get('/:id', controller.get);
+    .get('/:id', controller.get)
+    .delete('/:id', controller.remove);
 };

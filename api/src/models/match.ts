@@ -15,6 +15,8 @@ export interface MatchRepository {
   create(m: MatchRecord): Promise<void>;
   markLive(id: string, awayPlayerId: string): Promise<void>;
   finish(id: string, score: Record<Team, number>, finishedAt: string): Promise<void>;
+  /** Marks one match `abandoned` (an open match cancelled by its host). */
+  abandon(id: string): Promise<void>;
   /** Marks every `open` or `live` match `abandoned` (on startup); returns how many changed. */
   abandonUnfinished(): Promise<number>;
 }

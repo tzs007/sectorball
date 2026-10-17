@@ -47,6 +47,17 @@ describe('sqlite match repository', () => {
     });
   });
 
+  it('abandons a single match', async () => {
+    const { matches, statusOf } = await setup();
+    await matches.create(record('m1'));
+    await matches.create(record('m2'));
+
+    await matches.abandon('m1');
+
+    expect(statusOf('m1')).toBe('abandoned');
+    expect(statusOf('m2')).toBe('open');
+  });
+
   it('marks open and live matches abandoned on startup', async () => {
     const { matches, statusOf } = await setup();
     await matches.create(record('open'));

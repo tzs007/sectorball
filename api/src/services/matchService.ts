@@ -25,7 +25,10 @@ import type { MatchRepository } from '../models/match.ts';
 
 export type MatchService = {
   listOpen(): MatchSummary[];
+  /** Opens a match hosted by the player, or returns the one they already host. */
   create(player: PlayerInfo): Promise<MatchView>;
+  /** Removes an open match; only its host may. */
+  cancel(matchId: string, player: PlayerInfo): Promise<void>;
   join(matchId: string, player: PlayerInfo): Promise<MatchView>;
   get(matchId: string): MatchView;
   teamOf(matchId: string, playerId: string): Team | null;
@@ -127,6 +130,8 @@ export const createMatchService = (deps: {
     },
 
     async create(player) {
+      const hosted = [...live.values()].find((m) => m.status === 'open' && m.home.id === player.id);
+      if (hosted) return viewOf(hosted);
       const home = copyOf(player);
       const m: LiveMatch = {
         id: randomUUID(),
@@ -137,18 +142,38 @@ export const createMatchService = (deps: {
         state: null,
         connected: { home: false, away: false },
       };
-      await matches.create({
-        id: m.id,
-        homePlayerId: home.id,
-        awayPlayerId: null,
-        homeScore: 0,
-        awayScore: 0,
-        status: m.status,
-        createdAt: m.createdAt,
-        finishedAt: null,
-      });
+      // register before awaiting so a concurrent create by the same host finds it
       live.set(m.id, m);
+      try {
+        await matches.create({
+          id: m.id,
+          homePlayerId: home.id,
+          awayPlayerId: null,
+          homeScore: 0,
+          awayScore: 0,
+          status: m.status,
+          createdAt: m.createdAt,
+          finishedAt: null,
+        });
+      } catch (error) {
+        live.delete(m.id);
+        throw error;
+      }
       return viewOf(m);
+    },
+
+    async cancel(matchId, player) {
+      const m = find(matchId);
+      if (m.home.id !== player.id) throw new ConflictError('notHost');
+      if (m.status !== 'open') throw new ConflictError('matchNotOpen');
+      // remove before awaiting so nobody can join it meanwhile
+      live.delete(matchId);
+      try {
+        await matches.abandon(matchId);
+      } catch (error) {
+        live.set(matchId, m);
+        throw error;
+      }
     },
 
     async join(matchId, player) {

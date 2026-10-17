@@ -16,6 +16,11 @@ export const createMatchController = (matches: MatchService) => ({
     res.json(await matches.join(String(req.params.id), getPlayer(res)));
   }) satisfies RequestHandler,
 
+  remove: (async (req, res) => {
+    await matches.cancel(String(req.params.id), getPlayer(res));
+    res.status(204).end();
+  }) satisfies RequestHandler,
+
   get: ((req, res) => {
     res.json(matches.get(String(req.params.id)));
   }) satisfies RequestHandler,

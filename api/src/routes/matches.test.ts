@@ -67,6 +67,26 @@ describe('matches routes', () => {
     expect(full.body).toEqual({ error: 'matchFull' });
   });
 
+  it('lets the host cancel an open match', async () => {
+    const { app, guest, list } = setup();
+    const a = await guest('Alice');
+    const b = await guest('Bob');
+    const { id } = (await request(app).post('/api/matches').set('Authorization', a)).body as MatchView;
+
+    const again = await request(app).post('/api/matches').set('Authorization', a);
+    expect(again.status).toBe(201);
+    expect((again.body as MatchView).id).toBe(id);
+
+    const notHost = await request(app).delete(`/api/matches/${id}`).set('Authorization', b);
+    expect(notHost.status).toBe(409);
+    expect(notHost.body).toEqual({ error: 'notHost' });
+
+    const cancelled = await request(app).delete(`/api/matches/${id}`).set('Authorization', a);
+    expect(cancelled.status).toBe(204);
+    expect(cancelled.text).toBe('');
+    expect((await list(b)).items).toEqual([]);
+  });
+
   it('returns 404 for an unknown match', async () => {
     const { app, guest } = setup();
     const a = await guest('Alice');
@@ -85,6 +105,7 @@ describe('matches routes', () => {
       await request(app).post('/api/matches'),
       await request(app).post('/api/matches/x/join'),
       await request(app).get('/api/matches/x'),
+      await request(app).delete('/api/matches/x'),
     ]) {
       expect(res.status).toBe(401);
       expect(res.body).toEqual({ error: 'unauthorized' });

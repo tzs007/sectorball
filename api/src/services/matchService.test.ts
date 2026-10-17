@@ -43,7 +43,8 @@ const setup = async (overrides: Partial<MatchRepository> = {}) => {
   const bob = await addPlayer('bob');
   const carol = await addPlayer('carol');
   const rowOf = (id: string) => db.prepare('SELECT * FROM matches WHERE id = ?').get(id);
-  return { service, clock, alice, bob, carol, rowOf };
+  const countRows = () => db.prepare('SELECT COUNT(*) AS n FROM matches').get()?.n;
+  return { service, clock, alice, bob, carol, rowOf, countRows };
 };
 
 const liveMatch = async (overrides: Partial<MatchRepository> = {}) => {
@@ -72,6 +73,38 @@ describe('matchService', () => {
     const newer = await service.create(bob);
 
     expect(service.listOpen().map((m) => m.id)).toEqual([newer.id, older.id]);
+  });
+
+  it('returns the existing open match when its host creates again', async () => {
+    const { service, alice, countRows } = await setup();
+    const first = await service.create(alice);
+    const again = await service.create(alice);
+
+    expect(again.id).toBe(first.id);
+    expect(service.listOpen().map((m) => m.id)).toEqual([first.id]);
+    expect(countRows()).toBe(1);
+  });
+
+  it('lets the host cancel an open match', async () => {
+    const { service, alice, rowOf } = await setup();
+    const { id } = await service.create(alice);
+
+    await service.cancel(id, alice);
+
+    expect(service.listOpen()).toEqual([]);
+    expect(() => service.get(id)).toThrow(new NotFoundError('matchNotFound'));
+    expect(rowOf(id)).toMatchObject({ status: 'abandoned' });
+    expect((await service.create(alice)).id).not.toBe(id);
+  });
+
+  it('rejects cancelling an unknown match, a match of another host or a match that is not open', async () => {
+    const { service, alice, bob } = await setup();
+    await expect(service.cancel('nope', alice)).rejects.toThrow(new NotFoundError('matchNotFound'));
+    const { id } = await service.create(alice);
+    await expect(service.cancel(id, bob)).rejects.toThrow(new ConflictError('notHost'));
+    await service.join(id, bob);
+    await expect(service.cancel(id, alice)).rejects.toThrow(new ConflictError('matchNotOpen'));
+    expect(service.get(id).status).toBe('live');
   });
 
   it('starts the game when a second player joins', async () => {
@@ -219,6 +252,29 @@ describe('matchService', () => {
     await expect(service.join(id, bob)).rejects.toThrow('db down');
     expect(service.listOpen()).toMatchObject([{ id, status: 'open', away: null }]);
     expect(service.get(id).state).toBeNull();
+  });
+
+  it('creates only one match for concurrent creates by the same host', async () => {
+    const { service, alice, countRows } = await setup();
+    const [first, second] = await Promise.all([service.create(alice), service.create(alice)]);
+
+    expect(second.id).toBe(first.id);
+    expect(countRows()).toBe(1);
+  });
+
+  it('rolls the create back when it cannot be stored', async () => {
+    const { service, alice } = await setup({ create: () => Promise.reject(new Error('db down')) });
+
+    await expect(service.create(alice)).rejects.toThrow('db down');
+    expect(service.listOpen()).toEqual([]);
+  });
+
+  it('keeps the match open when the cancel cannot be stored', async () => {
+    const { service, alice } = await setup({ abandon: () => Promise.reject(new Error('db down')) });
+    const { id } = await service.create(alice);
+
+    await expect(service.cancel(id, alice)).rejects.toThrow('db down');
+    expect(service.listOpen().map((m) => m.id)).toEqual([id]);
   });
 
   it('keeps the game going when the result cannot be stored', async () => {
