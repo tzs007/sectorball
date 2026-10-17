@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PHYSICS } from './constants.ts';
+import { CENTER, PHYSICS } from './constants.ts';
 import { clampToField } from './field.ts';
 import { vec } from './geometry.ts';
 import { shotVelocity, simulate } from './physics.ts';
@@ -26,7 +26,8 @@ describe('shotVelocity', () => {
 
 describe('simulate (free movement)', () => {
   const pieces = [button('home-1', 100, 320)];
-  const ball = vec(900, 100);
+  // ball on the centre spot, out of the lone button's reach
+  const ball = vec(CENTER.x, CENTER.y);
   const expectedX = 100 + 687.5 ** 2 / (2 * PHYSICS.buttonDecel);
 
   it('a lone button slides opposite to the pull and stops', () => {
@@ -37,7 +38,7 @@ describe('simulate (free movement)', () => {
     expect(final?.pos.y).toBe(320);
     expect(result.contacts).toEqual([]);
     expect(result.ballExit).toBeNull();
-    expect(result.ballLeftCenterCircle).toBe(true);
+    expect(result.ballLeftCenterCircle).toBe(false);
     const last = result.frames[result.frames.length - 1];
     expect(last?.['home-1']).toEqual([round1(final?.pos.x ?? NaN), round1(final?.pos.y ?? NaN)]);
     expect(last?.ball).toEqual([round1(result.ball.x), round1(result.ball.y)]);
@@ -61,6 +62,12 @@ describe('simulate (free movement)', () => {
     const pos = result.pieces[0]?.pos ?? vec(NaN, NaN);
     expect(pos).toEqual(clampToField(pos));
     expect(pos.x).toBe(0);
+  });
+
+  it('the final frame equals the clamped rest positions', () => {
+    const result = simulate(pieces, ball, 'home-1', shotVelocity(vec(100, 0)));
+    const pos = result.pieces[0]?.pos ?? vec(NaN, NaN);
+    expect(result.frames[result.frames.length - 1]).toEqual({ 'home-1': [pos.x, pos.y], ball: [ball.x, ball.y] });
   });
 
   it('does not mutate its inputs', () => {
