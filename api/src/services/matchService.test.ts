@@ -1,11 +1,23 @@
-import { SHOT, TIMING } from '@sectorball/shared';
+import { SHOT, TIMING, declareShot } from '@sectorball/shared';
 import type { GameState, MatchView, PlayerInfo } from '@sectorball/shared';
-import { describe, expect, it } from 'vitest';
+import type * as Shared from '@sectorball/shared';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { openDatabase } from '../db/sqlite.ts';
 import { ConflictError, NotFoundError, ValidationError } from '../errors.ts';
+import type { MatchRepository } from '../models/match.ts';
 import { createSqliteMatchRepository } from '../models/sqlite/matchRepository.ts';
 import { createSqlitePlayerRepository } from '../models/sqlite/playerRepository.ts';
 import { createMatchService } from './matchService.ts';
+
+// passes through to the engine; single tests override one result
+vi.mock('@sectorball/shared', async (importOriginal) => {
+  const actual = await importOriginal<typeof Shared>();
+  return { ...actual, declareShot: vi.fn(actual.declareShot) };
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 const PULL = { x: SHOT.minPull, y: 0 };
 
@@ -14,7 +26,7 @@ const stateOf = (view: MatchView | undefined): GameState => {
   return view.state;
 };
 
-const setup = async () => {
+const setup = async (overrides: Partial<MatchRepository> = {}) => {
   const db = openDatabase(':memory:');
   const players = createSqlitePlayerRepository(db);
   const addPlayer = async (id: string): Promise<PlayerInfo> => {
@@ -23,7 +35,7 @@ const setup = async () => {
   };
   const clock = { now: 1_000_000 };
   const service = createMatchService({
-    matches: createSqliteMatchRepository(db),
+    matches: { ...createSqliteMatchRepository(db), ...overrides },
     now: () => clock.now,
     random: () => 0.1,
   });
@@ -34,8 +46,8 @@ const setup = async () => {
   return { service, clock, alice, bob, carol, rowOf };
 };
 
-const liveMatch = async () => {
-  const ctx = await setup();
+const liveMatch = async (overrides: Partial<MatchRepository> = {}) => {
+  const ctx = await setup(overrides);
   const created = await ctx.service.create(ctx.alice);
   const view = await ctx.service.join(created.id, ctx.bob);
   return { ...ctx, view, id: view.id };
@@ -174,5 +186,73 @@ describe('matchService', () => {
     await expect(service.declareShot(id, 'alice', stateOf(view).seq)).rejects.toThrow(
       new ConflictError('matchNotLive'),
     );
+  });
+
+  it('applies only one of two concurrent actions for the same seq', async () => {
+    const { service, id } = await liveMatch();
+    const input = { seq: 0, pieceId: 'home-1', pull: PULL } as const;
+
+    const results = await Promise.allSettled([service.shoot(id, 'alice', input), service.shoot(id, 'alice', input)]);
+
+    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+    expect(results.filter((r) => r.status === 'rejected').map((r) => r.reason as unknown)).toEqual([
+      new ValidationError('staleState'),
+    ]);
+  });
+
+  it('keeps its own copy of the players', async () => {
+    const { service, alice, bob } = await setup();
+    const home = { ...alice };
+    const away = { ...bob };
+    const { id } = await service.create(home);
+    await service.join(id, away);
+    Object.assign(home, { nickname: 'changed' });
+    Object.assign(away, { nickname: 'changed' });
+
+    expect(service.get(id)).toMatchObject({ home: alice, away: bob });
+  });
+
+  it('rolls the join back when it cannot be stored', async () => {
+    const { service, alice, bob } = await setup({ markLive: () => Promise.reject(new Error('db down')) });
+    const { id } = await service.create(alice);
+
+    await expect(service.join(id, bob)).rejects.toThrow('db down');
+    expect(service.listOpen()).toMatchObject([{ id, status: 'open', away: null }]);
+    expect(service.get(id).state).toBeNull();
+  });
+
+  it('keeps the game going when the result cannot be stored', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const ctx = await liveMatch({ finish: () => Promise.reject(new Error('db down')) });
+    const { service, clock, carol, alice } = ctx;
+    clock.now += TIMING.halfLengthMs;
+    await service.tick();
+    // a second match whose turn runs out in the same tick as the first match ends
+    clock.now += TIMING.halfLengthMs - TIMING.turnLimitMs;
+    const other = await service.join((await service.create(carol)).id, alice);
+    clock.now += TIMING.turnLimitMs;
+
+    const views = await service.tick();
+
+    expect(views.map((v) => [v.id, v.status])).toEqual([
+      [ctx.id, 'finished'],
+      [other.id, 'live'],
+    ]);
+    expect(stateOf(views[1]).lastDecision).toEqual({ kind: 'turnTimeout', team: 'home' });
+    expect(error).toHaveBeenCalledOnce();
+  });
+
+  it('resolves an action that ends the match even when the result cannot be stored', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { service, id, view } = await liveMatch({ finish: () => Promise.reject(new Error('db down')) });
+    // no engine action ends a match today; this pins the service's handling if one does
+    vi.mocked(declareShot).mockReturnValueOnce({
+      ok: true,
+      value: { ...stateOf(view), phase: 'finished', winner: 'draw', seq: 1 },
+    });
+
+    await expect(service.declareShot(id, 'alice', 0)).resolves.toMatchObject({ id, status: 'finished' });
+    expect(service.get(id).status).toBe('finished');
+    expect(error).toHaveBeenCalledOnce();
   });
 });

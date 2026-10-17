@@ -61,6 +61,8 @@ const summaryOf = (m: LiveMatch): MatchSummary => ({
   createdAt: m.createdAt,
 });
 
+const copyOf = (p: PlayerInfo): PlayerInfo => ({ id: p.id, nickname: p.nickname });
+
 const unwrap = <T>(result: Result<T>): T => {
   if (!result.ok) throw new ValidationError(result.error);
   return result.value;
@@ -98,12 +100,19 @@ export const createMatchService = (deps: {
     return { m, team, state: m.state };
   };
 
-  /** Stores a new state; persists the result once when it ends the match. */
+  /**
+   * Stores a new state; persists the result once when it ends the match. The in-memory game is the source of
+   * truth, so a failed write is logged and never undoes or rejects the move.
+   */
   const commit = async (m: LiveMatch, state: GameState): Promise<MatchView> => {
     m.state = state;
     if (state.phase === 'finished' && m.status === 'live') {
       m.status = 'finished';
-      await matches.finish(m.id, { ...state.score }, new Date(now()).toISOString());
+      try {
+        await matches.finish(m.id, { ...state.score }, new Date(now()).toISOString());
+      } catch (error) {
+        console.error(`failed to store the result of match ${m.id}`, error);
+      }
     }
     return viewOf(m);
   };
@@ -117,7 +126,8 @@ export const createMatchService = (deps: {
         .map(summaryOf);
     },
 
-    async create(home) {
+    async create(player) {
+      const home = copyOf(player);
       const m: LiveMatch = {
         id: randomUUID(),
         status: 'open',
@@ -146,10 +156,17 @@ export const createMatchService = (deps: {
       if (m.home.id === player.id) throw new ConflictError('ownMatch');
       if (m.status !== 'open') throw new ConflictError('matchFull');
       // claim the seat before awaiting so a concurrent join sees the match full
-      m.away = player;
+      m.away = copyOf(player);
       m.status = 'live';
       m.state = createGame({ matchId, firstKickoff: random() < 0.5 ? 'home' : 'away', now: now() });
-      await matches.markLive(matchId, player.id);
+      try {
+        await matches.markLive(matchId, player.id);
+      } catch (error) {
+        m.away = null;
+        m.status = 'open';
+        m.state = null;
+        throw error;
+      }
       return viewOf(m);
     },
 
