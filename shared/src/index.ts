@@ -6,3 +6,4 @@ export * from './physics.ts';
 export * from './referee.ts';
 export * from './restarts.ts';
 export * from './game.ts';
+export * from './events.ts';
