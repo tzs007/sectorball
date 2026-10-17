@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { FIELD, PIECE, RESTART } from './constants.ts';
 import { formation, isInPenaltyArea, isInsideField } from './field.ts';
+import type { Vec } from './geometry.ts';
 import { distance, vec } from './geometry.ts';
 import { cornerPoint, goalKickPoint, placeFreeKick, placePenalty, resolveOverlaps } from './restarts.ts';
 import type { Piece } from './types.ts';
@@ -15,6 +16,13 @@ const get = (pieces: readonly Piece[], id: string): Piece => {
 const move = (pieces: readonly Piece[], id: string, x: number, y: number): Piece[] =>
   pieces.map((p) => (p.id === id ? { ...p, pos: vec(x, y) } : p));
 const BALL_CLEARANCE = PIECE.buttonRadius + PIECE.ballRadius + 1;
+const KEEPER_CLEARANCE = PIECE.buttonRadius + 1;
+/** Distance from `pos` to the keeper rectangle centred on `keeper`. */
+const keeperGap = (pos: Vec, keeper: Vec): number => {
+  const dx = Math.max(0, Math.abs(pos.x - keeper.x) - PIECE.keeperWidth / 2);
+  const dy = Math.max(0, Math.abs(pos.y - keeper.y) - PIECE.keeperHeight / 2);
+  return Math.hypot(dx, dy);
+};
 const minPairGap = (pieces: readonly Piece[]): number => {
   const b = buttons(pieces);
   let min = Infinity;
@@ -43,6 +51,29 @@ describe('resolveOverlaps', () => {
     expect(Number.isFinite(moved.pos.x) && Number.isFinite(moved.pos.y)).toBe(true);
     expect(distance(moved.pos, vec(300, 300))).toBeGreaterThanOrEqual(BALL_CLEARANCE);
     expect(out.find((p) => p.id === 'home-gk')).toEqual(base.find((p) => p.id === 'home-gk'));
+  });
+
+  it.each([
+    ['on the goal line in the goal mouth', vec(0, 300)],
+    ['centred on the keeper', vec(9, 320)],
+    ['touching the keeper from the field side', vec(30, 340)],
+  ])('separates a button placed %s from the keeper rectangle', (_label, at) => {
+    const base = move(start(), 'away-3', at.x, at.y);
+    const keeper = get(base, 'home-gk').pos;
+    const out = resolveOverlaps(base, vec(500, 320), false);
+    const moved = get(out, 'away-3').pos;
+    expect(isInsideField(moved)).toBe(true);
+    expect(keeperGap(moved, keeper)).toBeGreaterThanOrEqual(KEEPER_CLEARANCE - 1e-9);
+    expect(get(out, 'home-gk').pos).toEqual(keeper);
+  });
+
+  it('keeps buttons off the keeper while clearing the ball', () => {
+    const base = move(start(), 'away-3', 2, 330);
+    const ball = vec(30, 300);
+    const out = resolveOverlaps(base, ball, true);
+    const moved = get(out, 'away-3').pos;
+    expect(keeperGap(moved, get(base, 'home-gk').pos)).toBeGreaterThanOrEqual(KEEPER_CLEARANCE - 1e-9);
+    expect(distance(moved, ball)).toBeGreaterThanOrEqual(BALL_CLEARANCE - 1e-9);
   });
 
   it('does not mutate its input', () => {

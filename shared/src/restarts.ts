@@ -11,6 +11,8 @@ const MAX_PASSES = 20;
 const GAP = 1;
 const BUTTON_SEPARATION = PIECE.buttonRadius * 2 + GAP;
 const BALL_SEPARATION = PIECE.buttonRadius + PIECE.ballRadius + GAP;
+const KEEPER_SEPARATION = PIECE.buttonRadius + GAP;
+const KEEPER_HALF = vec(PIECE.keeperWidth / 2, PIECE.keeperHeight / 2);
 const FALLBACK_DIRECTION = vec(1, 0);
 const FIELD_CENTER = vec(CENTER.x, CENTER.y);
 
@@ -38,6 +40,30 @@ const ballClearance: Clearance = () => BALL_SEPARATION;
 
 /** Minimum clearance is met up to float rounding; candidates are generated slightly outside the circle. */
 const CIRCLE_MARGIN = 1 + 1e-9;
+
+/** Distance from `pos` to the keeper rectangle centred on `keeper` (0 inside it). */
+const keeperGap = (pos: Vec, keeper: Vec): number =>
+  Math.hypot(
+    Math.max(0, Math.abs(pos.x - keeper.x) - KEEPER_HALF.x),
+    Math.max(0, Math.abs(pos.y - keeper.y) - KEEPER_HALF.y),
+  );
+
+/** Nearest points to `pos` that clear the keeper rectangle: straight out of each face and radially off the closest point. */
+const keeperExits = (pos: Vec, keeper: Vec): Vec[] => {
+  const dx = KEEPER_HALF.x + KEEPER_SEPARATION;
+  const dy = KEEPER_HALF.y + KEEPER_SEPARATION;
+  const closest = vec(
+    Math.min(keeper.x + KEEPER_HALF.x, Math.max(keeper.x - KEEPER_HALF.x, pos.x)),
+    Math.min(keeper.y + KEEPER_HALF.y, Math.max(keeper.y - KEEPER_HALF.y, pos.y)),
+  );
+  return [
+    vec(keeper.x - dx, pos.y),
+    vec(keeper.x + dx, pos.y),
+    vec(pos.x, keeper.y - dy),
+    vec(pos.x, keeper.y + dy),
+    add(closest, scale(directionAway(closest, pos), KEEPER_SEPARATION * CIRCLE_MARGIN)),
+  ];
+};
 
 type Rules = {
   readonly ball: Vec;
@@ -67,15 +93,19 @@ const circleLineHits = (ball: Vec, r: number, axis: 'x' | 'y', value: number): V
 };
 
 /**
- * Nearest in-field point to `pos` that is at least `minDistance` from the ball and outside the keep-out area.
- * Candidates: radial push, area edge, clamped position, and circle/line intersections along the field
- * boundary and the area edge (so a radial target outside the field slides along the boundary).
+ * Nearest in-field point to `pos` that is at least `minDistance` from the ball, clear of the keepers and
+ * outside the keep-out area. Candidates: radial push, area edge, keeper exits, clamped position, and
+ * circle/line intersections along the field boundary and the area edge (so a radial target outside the
+ * field slides along the boundary).
  */
-const nearestAllowed = (pos: Vec, rules: Rules, minDistance: number): Vec => {
+const nearestAllowed = (pos: Vec, rules: Rules, keepers: readonly Vec[], minDistance: number): Vec => {
   const { ball, keepOut } = rules;
   const r = minDistance * CIRCLE_MARGIN;
   const allowed = (q: Vec): boolean =>
-    isInsideField(q) && distance(q, ball) >= minDistance && !(keepOut && inKeepOut(q, keepOut));
+    isInsideField(q) &&
+    distance(q, ball) >= minDistance &&
+    keepers.every((k) => keeperGap(q, k) >= KEEPER_SEPARATION) &&
+    !(keepOut && inKeepOut(q, keepOut));
   const candidates: Vec[] = [
     pos,
     clampToField(pos),
@@ -84,6 +114,7 @@ const nearestAllowed = (pos: Vec, rules: Rules, minDistance: number): Vec => {
     ...circleLineHits(ball, r, 'x', FIELD.width),
     ...circleLineHits(ball, r, 'y', 0),
     ...circleLineHits(ball, r, 'y', FIELD.height),
+    ...keepers.flatMap((k) => keeperExits(pos, k)),
   ];
   if (keepOut) {
     const x = outsideAreaX(keepOut);
@@ -94,19 +125,21 @@ const nearestAllowed = (pos: Vec, rules: Rules, minDistance: number): Vec => {
   return valid.reduce((best, q) => (distance(q, pos) < distance(best, pos) ? q : best));
 };
 
-const enforce = (piece: Piece, rules: Rules): Piece => {
+const enforce = (piece: Piece, rules: Rules, keepers: readonly Vec[]): Piece => {
   if (!isButton(piece) || rules.fixed.has(piece.id)) return piece;
-  const target = nearestAllowed(piece.pos, rules, rules.clearance(piece));
+  const target = nearestAllowed(piece.pos, rules, keepers, rules.clearance(piece));
   return target.x === piece.pos.x && target.y === piece.pos.y ? piece : withPos(piece, target);
 };
 
 /**
- * Alternate pair separation with enforcement of the per-piece rules (ball clearance, keep-out area).
+ * Alternate pair separation with enforcement of the per-piece rules (ball clearance, keeper clearance,
+ * keep-out area); keepers are static obstacles.
  * Enforcement runs last in every pass, so the result always satisfies those rules; pair separation
  * is best-effort and can stay unmet only if the pieces cannot geometrically fit (or after MAX_PASSES).
  */
 const separate = (pieces: readonly Piece[], rules: Rules): Piece[] => {
   const { fixed } = rules;
+  const keepers = pieces.filter((p) => !isButton(p)).map((p) => p.pos);
   let result = [...pieces];
   for (let pass = 0; pass < MAX_PASSES; pass++) {
     let changed = false;
@@ -132,7 +165,7 @@ const separate = (pieces: readonly Piece[], rules: Rules): Piece[] => {
         }
       }
     }
-    const enforced = result.map((p) => enforce(p, rules));
+    const enforced = result.map((p) => enforce(p, rules, keepers));
     changed ||= enforced.some((p, i) => p !== result[i]);
     result = enforced;
     if (!changed) break;
@@ -141,8 +174,8 @@ const separate = (pieces: readonly Piece[], rules: Rules): Piece[] => {
 };
 
 /**
- * Push overlapping buttons apart and (when `fixedBall`) away from the ball. Keepers and the ball
- * never move; the result is clamped into the field.
+ * Push overlapping buttons apart, off the keepers and (when `fixedBall`) away from the ball. Keepers and
+ * the ball never move; the result is clamped into the field.
  */
 export const resolveOverlaps = (pieces: readonly Piece[], ball: Vec, fixedBall: boolean): Piece[] =>
   separate(pieces, { ball, fixed: new Set(), clearance: fixedBall ? ballClearance : () => 0 });

@@ -11,7 +11,7 @@ import {
   shoot,
 } from "./game.ts";
 import type { Vec } from "./geometry.ts";
-import { vec } from "./geometry.ts";
+import { distance, vec } from "./geometry.ts";
 import { placePenalty } from "./restarts.ts";
 import type { GameState, Piece, PieceId, Result } from "./types.ts";
 
@@ -159,6 +159,26 @@ describe("shoot", () => {
     expect(replay.frameMs).toBeCloseTo(1000 / 60);
     expect(replay.frames.length).toBeGreaterThan(0);
     expect(posOf(next, "home-2")?.y).toBeLessThan(170);
+  });
+
+  it("moves a button clamped onto the ball after a normal shot off it", () => {
+    const ball = vec(300, 632);
+    const state = game({
+      restart: null,
+      ball,
+      pieces: [
+        piece("home-1", 420, 630),
+        piece("home-gk", 9, 320),
+        piece("away-gk", 991, 320),
+      ],
+    });
+    // runs past below the ball and out over the touchline, then is clamped back onto the line
+    const pull = vec((130 / 139.3) * 72, (-50 / 139.3) * 72);
+    const { state: next } = unwrap(shoot(state, "home", "home-1", pull, 1));
+    expect(next.lastDecision).toEqual({ kind: "play", pass: false });
+    expect(next.ball).toEqual(ball);
+    const shooter = posOf(next, "home-1");
+    expect(shooter && distance(shooter, ball)).toBeGreaterThanOrEqual(33);
   });
 
   it("retakes a kickoff when the ball never left the centre circle", () => {

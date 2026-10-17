@@ -8,6 +8,7 @@ import {
   goalKickPoint,
   placeFreeKick,
   placePenalty,
+  resolveOverlaps,
 } from "./restarts.ts";
 import type { Layout } from "./restarts.ts";
 import { other } from "./types.ts";
@@ -120,13 +121,21 @@ const outcome = (
     }
     case "kickoffRetake":
       return kickoff(state, state.turn);
-    default: // 'play' (judgeShot never returns the clock decisions)
+    case "play":
+      // buttons clamped back onto a line can rest on the ball or each other
       return {
-        pieces: sim.pieces,
+        pieces: resolveOverlaps(sim.pieces, sim.ball, true),
         ball: sim.ball,
         turn: other(shooter),
         restart: null,
       };
+    case "turnTimeout":
+    case "halfTime":
+    case "fullTime":
+      // clock decisions come from advanceClock, never from judgeShot
+      return {};
+    default:
+      return decision satisfies never;
   }
 };
 
