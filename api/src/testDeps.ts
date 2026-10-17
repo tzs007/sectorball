@@ -5,13 +5,13 @@ import { createMatchService } from './services/matchService.ts';
 import { createSessionService } from './services/sessionService.ts';
 import type { AppDeps } from './app.ts';
 
-export const testDeps = (): AppDeps => {
+export const testDeps = (options: { random?: () => number } = {}): AppDeps => {
   const db = openDatabase(':memory:');
   const players = createSqlitePlayerRepository(db);
   const matches = createMatchService({
     matches: createSqliteMatchRepository(db),
     now: Date.now,
-    random: Math.random,
+    random: options.random ?? Math.random,
   });
   return { sessions: createSessionService({ players, now: () => new Date() }), matches };
 };
