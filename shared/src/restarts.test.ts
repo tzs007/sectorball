@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FIELD, PIECE, RESTART } from './constants.ts';
-import { formation, isInsideField } from './field.ts';
+import { formation, isInPenaltyArea, isInsideField } from './field.ts';
 import { distance, vec } from './geometry.ts';
 import { cornerPoint, goalKickPoint, placeFreeKick, placePenalty, resolveOverlaps } from './restarts.ts';
 import type { Piece } from './types.ts';
@@ -14,6 +14,7 @@ const get = (pieces: readonly Piece[], id: string): Piece => {
 };
 const move = (pieces: readonly Piece[], id: string, x: number, y: number): Piece[] =>
   pieces.map((p) => (p.id === id ? { ...p, pos: vec(x, y) } : p));
+const BALL_CLEARANCE = PIECE.buttonRadius + PIECE.ballRadius + 1;
 const minPairGap = (pieces: readonly Piece[]): number => {
   const b = buttons(pieces);
   let min = Infinity;
@@ -29,7 +30,7 @@ describe('resolveOverlaps', () => {
     const home2 = get(base, 'home-2');
     const { pieces, ball } = placeFreeKick(base, home2.pos, 'away');
     for (const b of buttons(pieces)) {
-      expect(distance(b.pos, ball)).toBeGreaterThanOrEqual(PIECE.buttonRadius + PIECE.ballRadius);
+      expect(distance(b.pos, ball)).toBeGreaterThanOrEqual(BALL_CLEARANCE);
       expect(isInsideField(b.pos)).toBe(true);
     }
     expect(minPairGap(pieces)).toBeGreaterThanOrEqual(PIECE.buttonRadius * 2);
@@ -40,7 +41,7 @@ describe('resolveOverlaps', () => {
     const out = resolveOverlaps(base, vec(300, 300), true);
     const moved = get(out, 'away-3');
     expect(Number.isFinite(moved.pos.x) && Number.isFinite(moved.pos.y)).toBe(true);
-    expect(distance(moved.pos, vec(300, 300))).toBeGreaterThanOrEqual(PIECE.buttonRadius + PIECE.ballRadius);
+    expect(distance(moved.pos, vec(300, 300))).toBeGreaterThanOrEqual(BALL_CLEARANCE);
     expect(out.find((p) => p.id === 'home-gk')).toEqual(base.find((p) => p.id === 'home-gk'));
   });
 
@@ -61,6 +62,30 @@ describe('placeFreeKick', () => {
     expect(get(pieces, 'away-3').pos).toEqual(vec(700, 420));
   });
 
+  it('keeps the free-kick distance for a throw-in at the touchline', () => {
+    const base = move(start(), 'home-1', 500, 0);
+    const { pieces, ball } = placeFreeKick(base, vec(500, 2), 'away');
+    const moved = get(pieces, 'home-1');
+    expect(isInsideField(moved.pos)).toBe(true);
+    expect(distance(moved.pos, ball)).toBeGreaterThanOrEqual(RESTART.freeKickDistance);
+  });
+
+  it('keeps every constraint with a crowded wall around the ball', () => {
+    let base = start();
+    const spots = [vec(505, 300), vec(495, 300), vec(500, 310), vec(500, 290), vec(500, 300)];
+    (['home-1', 'home-2', 'home-3', 'home-4', 'home-5'] as const).forEach((id, i) => {
+      base = move(base, id, spots[i]?.x ?? 0, spots[i]?.y ?? 0);
+    });
+    const { pieces, ball } = placeFreeKick(base, vec(500, 300), 'away');
+    for (const b of buttons(pieces)) {
+      expect(isInsideField(b.pos)).toBe(true);
+      expect(distance(b.pos, ball)).toBeGreaterThanOrEqual(
+        b.team === 'home' ? RESTART.freeKickDistance : BALL_CLEARANCE,
+      );
+    }
+    expect(minPairGap(pieces)).toBeGreaterThanOrEqual(PIECE.buttonRadius * 2);
+  });
+
   it('clamps the ball into the field', () => {
     expect(placeFreeKick(start(), vec(-5, 700), 'home').ball).toEqual(vec(0, FIELD.height));
   });
@@ -75,8 +100,19 @@ describe('placePenalty', () => {
     const kicker = get(pieces, kickerId);
     expect(kicker.pos).toEqual(vec(150, 320));
     for (const b of buttons(pieces).filter((p) => p.id !== kickerId))
-      expect(b.pos.x <= 150 && b.pos.y >= 140 && b.pos.y <= 500).toBe(false);
+      expect(isInPenaltyArea(b.pos, 'left')).toBe(false);
     expect(pieces.find((p) => p.id === 'home-gk')).toEqual(base.find((p) => p.id === 'home-gk'));
+  });
+
+  it('moves buttons out of the area even when they are stacked, without re-entering it', () => {
+    let base = start();
+    for (const id of ['home-1', 'home-2', 'home-3', 'away-3']) base = move(base, id, 80, 320);
+    base = move(move(base, 'away-2', 100, 200), 'home-4', 100, 200);
+    const { pieces, kickerId } = placePenalty(base, 'home', 1, 'away');
+    const others = buttons(pieces).filter((p) => p.id !== kickerId);
+    for (const b of others) expect(isInPenaltyArea(b.pos, 'left')).toBe(false);
+    expect(minPairGap(pieces)).toBeGreaterThanOrEqual(PIECE.buttonRadius * 2);
+    expect(get(pieces, kickerId).pos).toEqual(vec(150, 320));
   });
 
   it('works on the right side', () => {
