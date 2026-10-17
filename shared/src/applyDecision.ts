@@ -139,18 +139,18 @@ const outcome = (
   }
 };
 
-/** Next state after a simulated shot by `shooter` and the referee's `decision`. */
+/** Next state after a simulated shot by `shooter` and the referee's `decision`; the next turn starts at `turnStartsAt`. */
 export const applyDecision = (
   state: GameState,
   shooter: Team,
   decision: Decision,
   sim: SimResult,
-  now: number,
+  turnStartsAt: number,
 ): GameState => ({
   ...state,
   shotDeclared: false,
   ...outcome(state, shooter, decision, sim),
   lastDecision: decision,
-  turnStartedAt: now,
+  turnStartedAt: turnStartsAt,
   seq: state.seq + 1,
 });

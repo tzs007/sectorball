@@ -6,11 +6,13 @@ import {
   canShoot,
   confirmKeeper,
   createGame,
+  deadlines,
   declareShot,
   moveKeeper,
   shoot,
 } from "./game.ts";
 import type { Vec } from "./geometry.ts";
+import { TIMING } from "./constants.ts";
 import { distance, vec } from "./geometry.ts";
 import { placePenalty } from "./restarts.ts";
 import type { GameState, Piece, PieceId, Result } from "./types.ts";
@@ -154,7 +156,11 @@ describe("shoot", () => {
     expect(next.turn).toBe("away");
     expect(next.seq).toBe(1);
     expect(next.restart).toBeNull();
-    expect(next.turnStartedAt).toBe(5000);
+    const replayMs = replay.frames.length * (1000 / 60);
+    expect(next.turnStartedAt).toBe(5000 + replayMs);
+    expect(deadlines(next).turnEndsAt).toBe(
+      5000 + replayMs + TIMING.turnLimitMs,
+    );
     expect(next.lastDecision).toEqual({ kind: "play", pass: false });
     expect(replay.frameMs).toBeCloseTo(1000 / 60);
     expect(replay.frames.length).toBeGreaterThan(0);
@@ -328,6 +334,63 @@ describe("shoot", () => {
   });
 });
 
+describe("clock checks on actions", () => {
+  it("rejects a shot after the half has run out", () => {
+    const state = game({ restart: null, turnStartedAt: 590_000 });
+    expect(errorOf(shoot(state, "home", "home-2", MIN_PULL, 600_000))).toBe(
+      "staleState",
+    );
+  });
+
+  it("rejects a shot or declaration after the turn limit", () => {
+    expect(
+      errorOf(shoot(game({ restart: null }), "home", "home-2", MIN_PULL, 30_000)),
+    ).toBe("staleState");
+    expect(errorOf(declareShot(attackingState(), "home", 30_000))).toBe(
+      "staleState",
+    );
+  });
+
+  it("rejects keeper moves and confirmation after the keeper setup limit", () => {
+    const declared = unwrap(declareShot(attackingState(), "home", 10));
+    expect(errorOf(moveKeeper(declared, "away", 300, 15_010))).toBe(
+      "staleState",
+    );
+    expect(errorOf(confirmKeeper(declared, "away", 15_010))).toBe(
+      "staleState",
+    );
+  });
+
+  it("still reports a finished match first", () => {
+    const finished = game({ phase: "finished", winner: "draw" });
+    expect(errorOf(shoot(finished, "home", "home-1", MIN_PULL, 10_000_000))).toBe(
+      "matchFinished",
+    );
+  });
+});
+
+describe("deadlines", () => {
+  it("ends the turn after the turn limit while aiming", () => {
+    const state = game({ halfStartedAt: 1000, turnStartedAt: 5000 });
+    expect(deadlines(state)).toEqual({
+      halfEndsAt: 1000 + TIMING.halfLengthMs,
+      turnEndsAt: 5000 + TIMING.turnLimitMs,
+    });
+  });
+
+  it("ends the turn after the keeper setup limit during keeper setup", () => {
+    const state = game({
+      phase: "keeperSetup",
+      halfStartedAt: 1000,
+      turnStartedAt: 5000,
+    });
+    expect(deadlines(state)).toEqual({
+      halfEndsAt: 1000 + TIMING.halfLengthMs,
+      turnEndsAt: 5000 + TIMING.keeperSetupLimitMs,
+    });
+  });
+});
+
 describe("declared shot flow", () => {
   it("lets the defender set the keeper, then the attacker shoot", () => {
     const declared = unwrap(declareShot(attackingState(), "home", 10));
@@ -338,7 +401,7 @@ describe("declared shot flow", () => {
       seq: 1,
     });
 
-    const moved = unwrap(moveKeeper(declared, "away", 300));
+    const moved = unwrap(moveKeeper(declared, "away", 300, 15));
     expect(posOf(moved, "away-gk")).toEqual({ x: 991, y: 300 });
     expect(moved.seq).toBe(1);
 
@@ -355,13 +418,13 @@ describe("declared shot flow", () => {
   it("clamps the keeper to the goal mouth and rejects non-finite positions", () => {
     const declared = unwrap(declareShot(attackingState(), "home", 10));
     expect(
-      posOf(unwrap(moveKeeper(declared, "away", 9999)), "away-gk")?.y,
+      posOf(unwrap(moveKeeper(declared, "away", 9999, 15)), "away-gk")?.y,
     ).toBe(400);
-    expect(errorOf(moveKeeper(declared, "away", Number.NaN))).toBe(
+    expect(errorOf(moveKeeper(declared, "away", Number.NaN, 15))).toBe(
       "invalidKeeperPosition",
     );
-    expect(errorOf(moveKeeper(declared, "home", 300))).toBe("notYourTurn");
-    expect(errorOf(moveKeeper(attackingState(), "home", 300))).toBe(
+    expect(errorOf(moveKeeper(declared, "home", 300, 15))).toBe("notYourTurn");
+    expect(errorOf(moveKeeper(attackingState(), "home", 300, 15))).toBe(
       "wrongPhase",
     );
     expect(errorOf(confirmKeeper(declared, "home", 20))).toBe("notYourTurn");
@@ -486,7 +549,9 @@ describe("advanceClock", () => {
   });
 
   it("ends the half during keeper setup of a declared shot", () => {
-    const declared = unwrap(declareShot(attackingState(), "home", 595_000));
+    const declared = unwrap(
+      declareShot({ ...attackingState(), turnStartedAt: 590_000 }, "home", 595_000),
+    );
     expect(advanceClock(declared, 600_000).half).toBe(2);
   });
 

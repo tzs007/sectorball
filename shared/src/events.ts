@@ -16,6 +16,8 @@ export type MatchSummary = {
 export type MatchView = MatchSummary & {
   readonly state: GameState | null;
   readonly connected: Readonly<Record<Team, boolean>>;
+  /** Server clock (ms) when the view was built, so clients can show the deadlines without clock skew. */
+  readonly serverNow: number;
 };
 
 export type AckResult<T> =
