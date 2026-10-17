@@ -26,7 +26,7 @@ const stateOf = (view: MatchView | undefined): GameState => {
   return view.state;
 };
 
-const setup = async (overrides: Partial<MatchRepository> = {}) => {
+const setup = async (overrides: Partial<MatchRepository> = {}, onChange?: (view: MatchView) => void) => {
   const db = openDatabase(':memory:');
   const players = createSqlitePlayerRepository(db);
   const addPlayer = async (id: string): Promise<PlayerInfo> => {
@@ -38,6 +38,7 @@ const setup = async (overrides: Partial<MatchRepository> = {}) => {
     matches: { ...createSqliteMatchRepository(db), ...overrides },
     now: () => clock.now,
     random: () => 0.1,
+    onChange,
   });
   const alice = await addPlayer('alice');
   const bob = await addPlayer('bob');
@@ -114,6 +115,19 @@ describe('matchService', () => {
     expect(view.state?.turn).toBe('home');
     expect(service.listOpen()).toEqual([]);
     expect(rowOf(view.id)).toMatchObject({ status: 'live', away_player_id: 'bob' });
+  });
+
+  it('reports the join and the cancel of a match as changes', async () => {
+    const onChange = vi.fn<(view: MatchView) => void>();
+    const { service, alice, bob } = await setup({}, onChange);
+    const joined = await service.join((await service.create(alice)).id, bob);
+    const { id } = await service.create(bob);
+    expect(onChange.mock.calls).toEqual([[joined]]);
+
+    await service.cancel(id, bob);
+
+    expect(onChange).toHaveBeenCalledTimes(2);
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ id, status: 'abandoned' }));
   });
 
   it('rejects an unknown match', async () => {

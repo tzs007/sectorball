@@ -75,8 +75,10 @@ export const createMatchService = (deps: {
   matches: MatchRepository;
   now: () => number;
   random: () => number;
+  /** Told about lobby changes made outside a socket handler (join, cancel), to push them to watchers. */
+  onChange?: (view: MatchView) => void;
 }): MatchService => {
-  const { matches, now, random } = deps;
+  const { matches, now, random, onChange } = deps;
   /** Insertion order = creation order. */
   const live = new Map<string, LiveMatch>();
 
@@ -174,6 +176,8 @@ export const createMatchService = (deps: {
         live.set(matchId, m);
         throw error;
       }
+      m.status = 'abandoned';
+      onChange?.(viewOf(m));
     },
 
     async join(matchId, player) {
@@ -192,7 +196,9 @@ export const createMatchService = (deps: {
         m.state = null;
         throw error;
       }
-      return viewOf(m);
+      const view = viewOf(m);
+      onChange?.(view);
+      return view;
     },
 
     get(matchId) {

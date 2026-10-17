@@ -20,11 +20,16 @@ let url: string;
 let clients: Client[];
 
 beforeEach(async () => {
-  // random 0.1 → home kicks off
-  deps = testDeps({ random: () => 0.1 });
+  // random 0.1 → home kicks off; service changes are pushed like in index.ts
+  deps = testDeps({
+    random: () => 0.1,
+    onChange: (view) => {
+      sockets.broadcast(view);
+    },
+  });
   httpServer = createServer(createApp(deps));
   io = new Server(httpServer);
-  attachMatchSockets(io, deps);
+  const sockets = attachMatchSockets(io, deps);
   clients = [];
   await new Promise<void>((resolve) => httpServer.listen(0, resolve));
   url = `http://localhost:${(httpServer.address() as AddressInfo).port}`;
@@ -96,6 +101,22 @@ describe('match sockets', () => {
     const badToken = socketFor('not-a-token');
     const badError = await new Promise<Error>((resolve) => badToken.once('connect_error', resolve));
     expect(badError.message).toBe('unauthorized');
+  });
+
+  it('pushes the started game to the creator watching the open match', async () => {
+    const homeGuest = await deps.sessions.createGuest('Alice');
+    const awayGuest = await deps.sessions.createGuest('Bob');
+    const { id: matchId } = await deps.matches.create(homeGuest.player);
+    const home = await connect(homeGuest.token);
+    const watched = await home.emitWithAck('match:watch', matchId);
+    expect(watched.ok && watched.data.status).toBe('open');
+
+    const started = nextUpdate(home, (view) => view.status === 'live');
+    await deps.matches.join(matchId, awayGuest.player);
+
+    const view = await started;
+    expect(view.away?.nickname).toBe('Bob');
+    expect(view.state).not.toBeNull();
   });
 
   it('lets both players watch the match', async () => {

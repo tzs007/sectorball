@@ -17,7 +17,15 @@ const sessions = createSessionService({ players, now: () => new Date() });
 
 const matchRepository = createSqliteMatchRepository(db);
 await matchRepository.abandonUnfinished();
-const matches = createMatchService({ matches: matchRepository, now: Date.now, random: Math.random });
+const matches = createMatchService({
+  matches: matchRepository,
+  now: Date.now,
+  random: Math.random,
+  // pushes REST joins/cancels to the players watching; `sockets` is only read after it is created below
+  onChange: (view) => {
+    sockets.broadcast(view);
+  },
+});
 
 const httpServer = createServer(createApp({ sessions, matches }));
 const io: MatchServer = new Server(httpServer, { cors: { origin: config.clientOrigin } });
