@@ -18,17 +18,23 @@ const lastToucher = (state: GameState, sim: SimResult): Team | null => {
   return null;
 };
 
+/** Foul: the shooter touches an opponent outfield button before it has touched the ball. */
 const judgeFoul = (state: GameState, shooter: Piece, sim: SimResult): Decision | null => {
-  const first = sim.contacts.find((c) => involves(c, shooter.id));
-  if (!first) return null;
-  const victim = state.pieces.find((p) => p.id === partner(first, shooter.id));
-  if (victim?.kind !== 'button' || victim.team === shooter.team) return null;
-  return {
-    kind: 'foul',
-    awardedTo: other(shooter.team),
-    at: first.at,
-    penalty: isInPenaltyArea(first.at, defendedSide(shooter.team, state.half)),
-  };
+  for (const c of sim.contacts) {
+    if (!involves(c, shooter.id)) continue;
+    const otherId = partner(c, shooter.id);
+    if (otherId === BALL) return null;
+    const victim = state.pieces.find((p) => p.id === otherId);
+    if (victim?.kind === 'button' && victim.team !== shooter.team) {
+      return {
+        kind: 'foul',
+        awardedTo: other(shooter.team),
+        at: c.at,
+        penalty: isInPenaltyArea(c.at, defendedSide(shooter.team, state.half)),
+      };
+    }
+  }
+  return null;
 };
 
 const judgeGoal = (state: GameState, shooter: Piece, side: Side): Decision => {

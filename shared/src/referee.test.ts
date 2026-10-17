@@ -86,6 +86,16 @@ describe('judgeShot', () => {
       expect(judgeShot(baseState(), shooter, sim)).toEqual({ kind: 'play', pass: false });
     });
 
+    it('still fouls when a teammate was touched before the opponent', () => {
+      const sim = fakeSim({ contacts: [contact('home-1', 'home-2'), contact('home-1', 'away-1', 600, 300)] });
+      expect(judgeShot(baseState(), shooter, sim)).toMatchObject({ kind: 'foul', at: vec(600, 300) });
+    });
+
+    it('still fouls when a post was touched before the opponent', () => {
+      const sim = fakeSim({ contacts: [contact('home-1', 'post'), contact('home-1', 'away-1')] });
+      expect(judgeShot(baseState(), shooter, sim).kind).toBe('foul');
+    });
+
     it('ignores keepers and posts', () => {
       expect(judgeShot(baseState(), shooter, fakeSim({ contacts: [contact('home-1', 'away-gk')] })).kind).toBe('play');
       expect(judgeShot(baseState(), shooter, fakeSim({ contacts: [contact('home-1', 'post')] })).kind).toBe('play');
