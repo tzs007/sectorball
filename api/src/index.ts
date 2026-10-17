@@ -2,14 +2,20 @@ import { createServer } from 'node:http';
 import { createApp } from './app.ts';
 import { config } from './config.ts';
 import { openDatabase } from './db/sqlite.ts';
+import { createSqliteMatchRepository } from './models/sqlite/matchRepository.ts';
 import { createSqlitePlayerRepository } from './models/sqlite/playerRepository.ts';
+import { createMatchService } from './services/matchService.ts';
 import { createSessionService } from './services/sessionService.ts';
 
 const db = openDatabase(config.databasePath);
 const players = createSqlitePlayerRepository(db);
 const sessions = createSessionService({ players, now: () => new Date() });
 
-const httpServer = createServer(createApp({ sessions }));
+const matchRepository = createSqliteMatchRepository(db);
+await matchRepository.abandonLive();
+const matches = createMatchService({ matches: matchRepository, now: Date.now, random: Math.random });
+
+const httpServer = createServer(createApp({ sessions, matches }));
 
 httpServer.listen(config.port, () => {
   console.info(`api listening on http://localhost:${config.port}`);
