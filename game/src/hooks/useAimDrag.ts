@@ -6,10 +6,10 @@ export type Aim = { readonly pieceId: PieceId; readonly from: Vec; readonly pull
 
 export type AimDrag = {
   readonly aim: Aim | null;
-  start(id: PieceId, from: Vec, pointer: Vec): void;
-  move(pointer: Vec): void;
-  end(): void;
-  cancel(): void;
+  readonly start: (id: PieceId, from: Vec, pointer: Vec) => void;
+  readonly move: (pointer: Vec) => void;
+  readonly end: () => void;
+  readonly cancel: () => void;
 };
 
 /** Slingshot drag state in pitch units: pull = pointer − piece; release with |pull| ≥ SHOT.minPull shoots. */

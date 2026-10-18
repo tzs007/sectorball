@@ -43,6 +43,18 @@ body {
   overflow: hidden;
 }
 
+.game {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.game__canvas {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .login-form {
   display: flex;
   flex-direction: column;
