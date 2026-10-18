@@ -1,7 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { canDeclareShot, createGame, FIELD } from '@sectorball/shared';
-import type { GameState, PlayerInfo, Team } from '@sectorball/shared';
+import type { GameState, PlayerInfo, Replay, Team } from '@sectorball/shared';
 import { describe, expect, it, vi } from 'vitest';
 import { Game } from './Game';
 
@@ -21,7 +21,7 @@ const players: Record<Team, PlayerInfo | null> = {
 };
 const inAwayHalf = { x: FIELD.width * 0.75, y: FIELD.height / 2 };
 
-const setup = (overrides: Partial<GameState> = {}, myTeam: Team = 'home') => {
+const setup = (overrides: Partial<GameState> = {}, myTeam: Team = 'home', replay: Replay | null = null) => {
   const state: GameState = { ...base, ...overrides };
   const props = {
     onShoot: vi.fn(),
@@ -30,7 +30,7 @@ const setup = (overrides: Partial<GameState> = {}, myTeam: Team = 'home') => {
     onConfirmKeeper: vi.fn(),
     onReplayEnd: vi.fn(),
   };
-  render(<Game state={state} myTeam={myTeam} players={players} replay={null} serverClockOffsetMs={0} {...props} />);
+  render(<Game state={state} myTeam={myTeam} players={players} replay={replay} serverClockOffsetMs={0} {...props} />);
   return { state, ...props };
 };
 
@@ -69,6 +69,15 @@ describe('Game', () => {
 
   it('hides Kapus kész during the opponent keeper setup', () => {
     setup({ phase: 'keeperSetup', turn: 'away' }, 'home');
+    expect(screen.queryByRole('button', { name: 'Kapus kész' })).not.toBeInTheDocument();
+  });
+
+  it('disables Kapu! and hides Kapus kész while a replay plays', () => {
+    const replay: Replay = { frames: [], frameMs: 16 };
+    setup({ ball: inAwayHalf }, 'home', replay);
+    expect(screen.getByRole('button', { name: 'Kapu!' })).toBeDisabled();
+    cleanup();
+    setup({ phase: 'keeperSetup', turn: 'away' }, 'away', replay);
     expect(screen.queryByRole('button', { name: 'Kapus kész' })).not.toBeInTheDocument();
   });
 

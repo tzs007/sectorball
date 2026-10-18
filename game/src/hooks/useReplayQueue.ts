@@ -5,8 +5,8 @@ export type ReplayItem = { readonly replay: Replay; readonly view: MatchView };
 
 export type ReplayQueue = {
   readonly current: ReplayItem | null;
-  push(item: ReplayItem): void;
-  finishCurrent(): void;
+  readonly push: (item: ReplayItem) => void;
+  readonly finishCurrent: () => void;
 };
 
 /** FIFO of shot replays: replays arriving while one plays wait their turn. */

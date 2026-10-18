@@ -1,11 +1,11 @@
-import { useApplication, useTick } from '@pixi/react';
+import { useApplication } from '@pixi/react';
 import { canShoot, clampKeeperY, FIELD } from '@sectorball/shared';
 import type { GameState, Piece, PieceId, Replay, Team, Vec } from '@sectorball/shared';
 import { Rectangle } from 'pixi.js';
-import type { FederatedPointerEvent, Ticker } from 'pixi.js';
+import type { FederatedPointerEvent } from 'pixi.js';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useAimDrag } from '../../hooks/useAimDrag';
-import { frameIndexAt, isReplayDone } from '../../utils/replay';
+import { useReplayPlayback } from '../../hooks/useReplayPlayback';
 import { throttle } from '../../utils/throttle';
 import type { Throttled } from '../../utils/throttle';
 import { fitToView, toWorld } from '../../utils/viewport';
@@ -65,37 +65,13 @@ export const GameScene = ({ state, myTeam, replay, onShoot, onMoveKeeper, onRepl
 
   // --- latest callbacks ---
   const onMoveKeeperRef = useRef(onMoveKeeper);
-  const onReplayEndRef = useRef(onReplayEnd);
   useLayoutEffect(() => {
     onMoveKeeperRef.current = onMoveKeeper;
-    onReplayEndRef.current = onReplayEnd;
-  }, [onMoveKeeper, onReplayEnd]);
+  }, [onMoveKeeper]);
 
   // --- replay playback ---
-  const elapsedRef = useRef(0);
-  const doneRef = useRef(false);
-  const [cursor, setCursor] = useState<{ replay: Replay | null; index: number }>({ replay: null, index: 0 });
-  useEffect(() => {
-    elapsedRef.current = 0;
-    doneRef.current = false;
-  }, [replay]);
-
-  const tick = useCallback(
-    (ticker: Ticker) => {
-      if (!replay || doneRef.current) return;
-      elapsedRef.current += ticker.deltaMS;
-      const index = frameIndexAt(replay, elapsedRef.current);
-      setCursor((c) => (c.replay === replay && c.index === index ? c : { replay, index }));
-      if (isReplayDone(replay, elapsedRef.current)) {
-        doneRef.current = true;
-        onReplayEndRef.current();
-      }
-    },
-    [replay],
-  );
-  useTick({ callback: tick, isEnabled: replay !== null });
-
-  const frame = replay ? replay.frames[cursor.replay === replay ? cursor.index : 0] : undefined;
+  const frameIndex = useReplayPlayback(replay, onReplayEnd);
+  const frame = replay?.frames[frameIndex];
 
   // --- input ---
   const { aim, start, move, end, cancel } = useAimDrag(onShoot);
@@ -131,6 +107,14 @@ export const GameScene = ({ state, myTeam, replay, onShoot, onMoveKeeper, onRepl
     }
   }, [aim, aimAllowed, cancel]);
 
+  // End a keeper drag when my keeper setup ends mid-drag (e.g. server deadline); drop pending emissions.
+  useEffect(() => {
+    if (!keeperDraggable && dragRef.current?.kind === 'keeper') {
+      dragRef.current = null;
+      throttledRef.current?.cancel();
+    }
+  }, [keeperDraggable]);
+
   const handleAimStart = useCallback(
     (pieceId: PieceId, e: FederatedPointerEvent) => {
       if (!view || dragRef.current !== null || !inputEnabled || !canShoot(state, myTeam, pieceId)) return;
@@ -160,13 +144,13 @@ export const GameScene = ({ state, myTeam, replay, onShoot, onMoveKeeper, onRepl
       const world = toWorld(e.global, view.fit);
       if (drag.kind === 'aim') {
         move(world);
-      } else {
+      } else if (keeperDraggable) {
         const y = clampKeeperY(world.y);
         setKeeperDrag({ y });
         throttledRef.current?.call(y);
       }
     },
-    [view, move],
+    [view, move, keeperDraggable],
   );
 
   const finish = useCallback(
@@ -177,11 +161,13 @@ export const GameScene = ({ state, myTeam, replay, onShoot, onMoveKeeper, onRepl
       if (drag.kind === 'aim') {
         if (shoot) end();
         else cancel();
-      } else {
+      } else if (keeperDraggable) {
         throttledRef.current?.flush();
+      } else {
+        throttledRef.current?.cancel();
       }
     },
-    [end, cancel],
+    [end, cancel, keeperDraggable],
   );
   const handleUp = useCallback((e: FederatedPointerEvent) => { finish(e, true); }, [finish]);
   const handleUpOutside = useCallback((e: FederatedPointerEvent) => { finish(e, false); }, [finish]);
