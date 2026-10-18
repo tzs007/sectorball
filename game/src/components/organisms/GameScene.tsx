@@ -169,8 +169,9 @@ export const GameScene = ({ state, myTeam, replay, onShoot, onMoveKeeper, onRepl
     },
     [end, cancel, keeperDraggable],
   );
+  // Releasing off-canvas still shoots (full-power shots near the touchlines need it); only a cancel aborts.
   const handleUp = useCallback((e: FederatedPointerEvent) => { finish(e, true); }, [finish]);
-  const handleUpOutside = useCallback((e: FederatedPointerEvent) => { finish(e, false); }, [finish]);
+  const handleCancel = useCallback((e: FederatedPointerEvent) => { finish(e, false); }, [finish]);
 
   // --- render ---
   const buttons = useMemo(() => state.pieces.filter((p) => p.kind === 'button'), [state.pieces]);
@@ -190,8 +191,8 @@ export const GameScene = ({ state, myTeam, replay, onShoot, onMoveKeeper, onRepl
       hitArea={view.hitArea}
       onGlobalPointerMove={handleMove}
       onPointerUp={handleUp}
-      onPointerUpOutside={handleUpOutside}
-      onPointerCancel={handleUpOutside}
+      onPointerUpOutside={handleUp}
+      onPointerCancel={handleCancel}
     >
       <pixiContainer x={FIELD.margin} y={FIELD.margin}>
         <Pitch />

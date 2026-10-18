@@ -47,7 +47,17 @@ describe('useAimDrag', () => {
     expect(result.current.aim).toBeNull();
   });
 
+  // GameScene maps pointerup and pointerupoutside to end(), only pointercancel to cancel().
   it('pointer up outside ends the aim', () => {
+    const { onShoot, result } = setup();
+    act(() => { result.current.start('home-1', from, from); });
+    act(() => { result.current.move({ x: -400, y: 100 }); });
+    act(() => { result.current.end(); });
+    expect(onShoot).toHaveBeenCalledExactlyOnceWith('home-1', { x: -500, y: 0 });
+    expect(result.current.aim).toBeNull();
+  });
+
+  it('pointer cancel cancels the aim without shooting', () => {
     const { onShoot, result } = setup();
     act(() => { result.current.start('home-1', from, from); });
     act(() => { result.current.move({ x: 40, y: 100 }); });

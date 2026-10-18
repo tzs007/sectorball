@@ -1,6 +1,6 @@
 import { length, sub, SHOT } from '@sectorball/shared';
 import type { PieceId, Vec } from '@sectorball/shared';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 export type Aim = { readonly pieceId: PieceId; readonly from: Vec; readonly pull: Vec };
 
@@ -19,7 +19,7 @@ export const useAimDrag = (onShoot: (id: PieceId, pull: Vec) => void): AimDrag =
   const aimRef = useRef<Aim | null>(null);
   const onShootRef = useRef(onShoot);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     onShootRef.current = onShoot;
   }, [onShoot]);
 
