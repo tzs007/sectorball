@@ -27,7 +27,10 @@ export type GameSceneProps = {
 
 const KEEPER_EMIT_MS = 100;
 
-type Drag = { readonly pointerId: number; readonly kind: 'aim' | 'keeper' };
+/** `grabOffsetY` = pointer.y − keeper.y at drag start, so the keeper doesn't jump to the pointer. */
+type Drag =
+  | { readonly pointerId: number; readonly kind: 'aim' }
+  | { readonly pointerId: number; readonly kind: 'keeper'; readonly grabOffsetY: number };
 
 type View = { readonly fit: Fit; readonly hitArea: Rectangle };
 
@@ -129,12 +132,13 @@ export const GameScene = ({ state, myTeam, replay, onShoot, onMoveKeeper, onRepl
   const handleKeeperDragStart = useCallback(
     (e: FederatedPointerEvent) => {
       if (!view || dragRef.current !== null || !keeperDraggable) return;
-      dragRef.current = { pointerId: e.pointerId, kind: 'keeper' };
-      const y = clampKeeperY(toWorld(e.global, view.fit).y);
-      setKeeperDrag({ y });
-      throttledRef.current?.call(y);
+      const keeper = state.pieces.find((p) => p.kind === 'keeper' && p.team === myTeam);
+      if (!keeper) return;
+      const keeperY = keeperDrag?.y ?? keeper.pos.y;
+      dragRef.current = { pointerId: e.pointerId, kind: 'keeper', grabOffsetY: toWorld(e.global, view.fit).y - keeperY };
+      setKeeperDrag({ y: keeperY });
     },
-    [view, keeperDraggable],
+    [view, keeperDraggable, state.pieces, myTeam, keeperDrag],
   );
 
   const handleMove = useCallback(
@@ -145,7 +149,7 @@ export const GameScene = ({ state, myTeam, replay, onShoot, onMoveKeeper, onRepl
       if (drag.kind === 'aim') {
         move(world);
       } else if (keeperDraggable) {
-        const y = clampKeeperY(world.y);
+        const y = clampKeeperY(world.y - drag.grabOffsetY);
         setKeeperDrag({ y });
         throttledRef.current?.call(y);
       }
