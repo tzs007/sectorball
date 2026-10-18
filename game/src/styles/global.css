@@ -42,3 +42,39 @@ body {
   height: 100%;
   overflow: hidden;
 }
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 20rem;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.text-input__field {
+  padding: 0.5rem;
+  font: inherit;
+}
+
+.login-form__error {
+  margin: 0;
+  color: #f66;
+}
+
+.button {
+  padding: 0.5rem 1rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
