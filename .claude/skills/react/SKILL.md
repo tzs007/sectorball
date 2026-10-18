@@ -9,15 +9,25 @@ description: Use when writing or reviewing React 19 components, hooks, pages or 
 ```
 game/src/
   main.tsx            # entry: createRoot + <StrictMode>
-  App.tsx             # root component (routing goes here when added)
+  App.tsx             # root: useSession + useMatchRoute → LoginPage | LobbyPage | MatchPage (no router library)
   pages/              # route-level components, wire data/state/sockets
+    LoginPage.tsx     #   guest login (nickname)
+    LobbyPage.tsx     #   open matches, Új meccs / Csatlakozás, logout (useLobby)
+    MatchPage.tsx     #   one match over Socket.IO (useMatch) → Game organism
   components/
     atoms/            # see `atomic-design` skill
     molecules/
     organisms/
     templates/
   hooks/              # custom hooks: useXxx.ts
-  services/           # side-effect code: socket client, API calls (no React imports)
+    useSession.ts     #   guest session in localStorage `sectorball.session`
+    useMatchRoute.ts  #   current match id in the URL hash `#/match/<id>`
+    useLobby.ts       #   REST: list (every 3 s) / create / join matches
+    useMatch.ts       #   socket: match:watch on every connect, view, replay queue, actions
+    useReplayQueue.ts, useReplayPlayback.ts, useAimDrag.ts, useNow.ts
+  services/           # side-effect code, no React imports
+    apiClient.ts      #   REST client (fetch), ApiError(status, code)
+    gameSocket.ts     #   typed Socket.IO client (connectGameSocket)
   constants/          # single source of truth for config values (see `dry`)
   types/              # shared domain types
   utils/              # pure helper functions
