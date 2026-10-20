@@ -5,6 +5,7 @@ import { Container, Graphics } from 'pixi.js';
 import { useRef } from 'react';
 import { THEME } from '../../constants/theme';
 import { useNow } from '../../hooks/useNow';
+import { useTransientText } from '../../hooks/useTransientText';
 import { decisionText } from '../../utils/decisionText';
 import { ActionBar } from '../molecules/ActionBar';
 import { DecisionToast } from '../molecules/DecisionToast';
@@ -44,6 +45,7 @@ export const Game = ({
 }: GameProps) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const now = useNow() + serverClockOffsetMs;
+  const toast = useTransientText(decisionText(state.lastDecision, myTeam), state.seq);
 
   return (
     <div className="game">
@@ -59,6 +61,7 @@ export const Game = ({
             onReplayEnd={onReplayEnd}
           />
         </Application>
+        <DecisionToast text={toast} />
       </div>
       <ActionBar
         canDeclareShot={replay === null && canDeclareShot(state, myTeam)}
@@ -66,7 +69,6 @@ export const Game = ({
         onDeclareShot={onDeclareShot}
         onConfirmKeeper={onConfirmKeeper}
       />
-      <DecisionToast text={decisionText(state.lastDecision, myTeam)} />
     </div>
   );
 };
