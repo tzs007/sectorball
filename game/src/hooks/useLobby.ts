@@ -18,7 +18,9 @@ export const useLobby = (token: string, api: ApiClient) => {
     const refresh = () => {
       api.listMatches(token).then(
         (items) => {
-          if (!cancelled) setMatches(items);
+          if (cancelled) return;
+          setMatches(items);
+          setError(null);
         },
         (err: unknown) => {
           if (!cancelled) setError(errorCode(err));
