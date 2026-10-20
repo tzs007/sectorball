@@ -113,3 +113,9 @@ CLAUDE.local.md
 *.zip
 *.bak
 *.orig
+
+# Claude Code worktrees
+.claude/worktrees/
+
+# Local SQLite database
+api/data/

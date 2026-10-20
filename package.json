@@ -5,6 +5,7 @@
   "type": "module",
   "description": "",
   "workspaces": [
+    "shared",
     "game",
     "api"
   ],

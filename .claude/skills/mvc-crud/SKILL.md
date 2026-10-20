@@ -13,7 +13,7 @@ The client is a React SPA, so the server's **View** is the JSON response (a DTO)
 | **Route** | `api/src/routes/` | Map HTTP verb + path → controller method; attach validation middleware | controllers |
 | **Controller** | `api/src/controllers/` | Read validated input from `req`, call the service, choose status code, send the DTO (the *view*) | services, views |
 | **Service** | `api/src/services/` | Business / game rules, orchestration; throws domain errors | models |
-| **Model** | `api/src/models/` | Domain type + repository (data access: in-memory `Map` now, DB later) | — |
+| **Model** | `api/src/models/` | Domain type + repository (data access: `models/sqlite/*` now, `models/supabase/*` later) | — |
 | **View (DTO)** | `api/src/views/` | `toXxxDto(entity)` — shape of the JSON response, hides internal fields | models (types) |
 
 Rules:

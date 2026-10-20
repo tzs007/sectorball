@@ -37,8 +37,157 @@ body {
   min-height: 0;
 }
 
-.game-canvas {
-  width: 100%;
+.game {
+  display: flex;
+  flex-direction: column;
   height: 100%;
+}
+
+.game__canvas {
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 20rem;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.text-input__field {
+  padding: 0.5rem;
+  font: inherit;
+}
+
+.login-form__error {
+  margin: 0;
+  color: #f66;
+}
+
+.button {
+  padding: 0.5rem 1rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.lobby-page__bar,
+.match-page__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+}
+
+.lobby-page__bar {
+  justify-content: flex-end;
+}
+
+.lobby {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 24rem;
+  margin: 1rem auto;
+  padding: 0 1rem;
+}
+
+.lobby__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.match-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.lobby__empty,
+.match-page__message {
+  margin: 0;
+  text-align: center;
+  opacity: 0.7;
+}
+
+.match-page__message {
+  padding: 2rem 1rem;
+}
+
+.lobby__error,
+.match-page__error {
+  margin: 0;
+  color: #f66;
+}
+
+.match-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.match-page__content {
+  flex: 1;
+  min-height: 0;
+}
+
+.game__canvas {
+  position: relative;
+}
+
+.scoreboard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  height: 3rem;
+  padding: 0 1rem;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.scoreboard__score {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  height: 3rem;
+  padding: 0 1rem;
+  white-space: nowrap;
+}
+
+.decision-toast {
+  position: absolute;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  background: rgb(0 0 0 / 0.75);
+  pointer-events: none;
 }

@@ -11,6 +11,7 @@
 - Real-time multiplayer: Socket.IO — skill: `socket-io`
 - Server: Node.js 22+ (`nodejs`) + Express 5 (`expressjs`), layered by the `mvc-crud` skill
   (routes → controllers → services → models, REST/CRUD conventions).
+- DB: SQLite via `node:sqlite` now (skill `sqlite`), Supabase later (skills `supabase`, `supabase-postgres-best-practices`) — always behind repository interfaces.
 
 ## Quality
 - **TDD with Vitest** for every feature/bugfix — skill: `vitest-tdd` (Testing Library in `game`, supertest in `api`).
@@ -26,3 +27,5 @@ Follow the `git` skill for branches and commit messages.
 ## Skills
 Project skills live in `.claude/skills/`. The `pixijs*` skills are vendored from
 https://github.com/pixijs/pixijs-skills (MIT) — update by re-copying `skills/` from that repo, don't edit them locally.
+The `supabase` and `supabase-postgres-best-practices` skills are vendored the same way from
+https://github.com/supabase/agent-skills (MIT) — don't edit them locally.
