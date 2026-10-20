@@ -12,6 +12,9 @@ export class ApiError extends Error {
   }
 }
 
+/** Error code for display: the API's code, or `networkError` for anything that is not an ApiError. */
+export const errorCode = (err: unknown): string => (err instanceof ApiError ? err.code : 'networkError');
+
 const parseBody = async (res: Response): Promise<unknown> => {
   const text = await res.text();
   if (text === '') return undefined;
@@ -22,7 +25,7 @@ const parseBody = async (res: Response): Promise<unknown> => {
   }
 };
 
-const errorCode = (body: unknown): string => {
+const bodyErrorCode = (body: unknown): string => {
   if (typeof body === 'object' && body !== null && 'error' in body && typeof body.error === 'string') {
     return body.error;
   }
@@ -40,7 +43,7 @@ export const createApiClient = (fetchFn: typeof fetch = (...args) => fetch(...ar
       body: json === undefined ? undefined : JSON.stringify(json),
     });
     const body = await parseBody(res);
-    if (!res.ok) throw new ApiError(res.status, errorCode(body));
+    if (!res.ok) throw new ApiError(res.status, bodyErrorCode(body));
     return body as T;
   };
 

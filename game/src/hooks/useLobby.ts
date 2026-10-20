@@ -1,11 +1,9 @@
 import type { MatchSummary, MatchView } from '@sectorball/shared';
 import { useCallback, useEffect, useState } from 'react';
-import { ApiError } from '../services/apiClient';
+import { errorCode } from '../services/apiClient';
 import type { ApiClient } from '../services/apiClient';
 
 const REFRESH_MS = 3000;
-
-const errorCode = (err: unknown): string => (err instanceof ApiError ? err.code : 'networkError');
 
 /** Open matches (refreshed on mount and every 3 s) plus create/join; failures reject and set `error`. */
 export const useLobby = (token: string, api: ApiClient) => {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { PlayerInfo } from '@sectorball/shared';
-import { ApiError, createApiClient } from '../services/apiClient';
+import { ApiError, createApiClient, errorCode } from '../services/apiClient';
 import type { ApiClient } from '../services/apiClient';
 
 export type Session = { readonly token: string; readonly player: PlayerInfo };
@@ -29,8 +29,6 @@ const loadSession = (): Session | null => {
 };
 
 const defaultApi = createApiClient();
-
-const errorCode = (err: unknown): string => (err instanceof ApiError ? err.code : 'networkError');
 
 export const useSession = (api: ApiClient = defaultApi) => {
   const [session, setSession] = useState<Session | null>(loadSession);
