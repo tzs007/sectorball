@@ -17,6 +17,7 @@ export type GameProps = {
   readonly state: GameState;
   readonly myTeam: Team;
   readonly players: Readonly<Record<Team, PlayerInfo | null>>;
+  readonly connected: Readonly<Record<Team, boolean>>;
   readonly replay: Replay | null;
   /** Server clock minus client clock (ms), used to correct the countdowns. */
   readonly serverClockOffsetMs: number;
@@ -32,6 +33,7 @@ export const Game = ({
   state,
   myTeam,
   players,
+  connected,
   replay,
   serverClockOffsetMs,
   onShoot,
@@ -45,7 +47,7 @@ export const Game = ({
 
   return (
     <div className="game">
-      <Scoreboard state={state} players={players} myTeam={myTeam} now={now} />
+      <Scoreboard state={state} players={players} connected={connected} myTeam={myTeam} now={now} />
       <div ref={canvasRef} className="game__canvas">
         <Application resizeTo={canvasRef} background={THEME.pitch} antialias>
           <GameScene

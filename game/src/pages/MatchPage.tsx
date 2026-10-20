@@ -37,6 +37,7 @@ export const MatchPage = ({ session, api, matchId, onLeave }: MatchPageProps) =>
         state={view.state}
         myTeam={myTeam}
         players={{ home: view.home, away: view.away }}
+        connected={view.connected}
         replay={replayItem?.replay ?? null}
         serverClockOffsetMs={match.serverClockOffsetMs}
         onShoot={match.shoot}

@@ -30,7 +30,7 @@ const setup = (overrides: Partial<GameState> = {}, myTeam: Team = 'home', replay
     onConfirmKeeper: vi.fn(),
     onReplayEnd: vi.fn(),
   };
-  render(<Game state={state} myTeam={myTeam} players={players} replay={replay} serverClockOffsetMs={0} {...props} />);
+  render(<Game state={state} myTeam={myTeam} players={players} connected={{ home: true, away: true }} replay={replay} serverClockOffsetMs={0} {...props} />);
   return { state, ...props };
 };
 

@@ -11,9 +11,16 @@ const players: Record<Team, PlayerInfo | null> = {
   away: { id: 'p2', nickname: 'Béla' },
 };
 
-const renderBoard = (overrides: Partial<GameState> = {}, myTeam: Team = 'home', now = 1_000) => {
+const bothConnected = { home: true, away: true };
+
+const renderBoard = (
+  overrides: Partial<GameState> = {},
+  myTeam: Team = 'home',
+  now = 1_000,
+  connected: Record<Team, boolean> = bothConnected,
+) => {
   const state: GameState = { ...base, ...overrides };
-  render(<Scoreboard state={state} players={players} myTeam={myTeam} now={now} />);
+  render(<Scoreboard state={state} players={players} connected={connected} myTeam={myTeam} now={now} />);
 };
 
 describe('Scoreboard', () => {
@@ -26,8 +33,14 @@ describe('Scoreboard', () => {
 
   it('shows a dash for a missing player', () => {
     const state: GameState = { ...base };
-    render(<Scoreboard state={state} players={{ home: players.home, away: null }} myTeam="home" now={0} />);
+    render(<Scoreboard state={state} players={{ home: players.home, away: null }} connected={bothConnected} myTeam="home" now={0} />);
     expect(screen.getByText('—')).toBeInTheDocument();
+  });
+
+  it('marks a disconnected player after the nickname', () => {
+    renderBoard({}, 'home', 1_000, { home: true, away: false });
+    expect(screen.getByText('Béla (nincs csatlakozva)')).toBeInTheDocument();
+    expect(screen.getByText('Anna')).toBeInTheDocument();
   });
 
   it('shows the half label and remaining half time', () => {
