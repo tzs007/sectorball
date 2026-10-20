@@ -29,5 +29,5 @@ export const App = () => {
     return <LobbyPage session={session} api={api} onEnterMatch={enter} onLogout={logout} />;
   }
 
-  return <MatchPage key={matchId} session={session} matchId={matchId} onLeave={leave} />;
+  return <MatchPage key={matchId} session={session} api={api} matchId={matchId} onLeave={leave} />;
 };

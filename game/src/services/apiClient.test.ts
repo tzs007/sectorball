@@ -35,6 +35,17 @@ describe('createApiClient', () => {
     expect(new Headers(init.headers).get('authorization')).toBe('Bearer t');
   });
 
+  it('cancels a match with DELETE and the bearer token, resolving on 204', async () => {
+    const fetchFn = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+
+    await expect(createApiClient(fetchFn).cancelMatch('t', 'm 1')).resolves.toBeUndefined();
+
+    const [url, init] = fetchFn.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('/api/matches/m%201');
+    expect(init.method).toBe('DELETE');
+    expect(new Headers(init.headers).get('authorization')).toBe('Bearer t');
+  });
+
   it('rejects non-2xx responses with an ApiError carrying status and code', async () => {
     const fetchFn = vi.fn().mockResolvedValue(jsonResponse({ error: 'matchFull' }, 409));
 

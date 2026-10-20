@@ -2,18 +2,28 @@ import { teamOf } from '@sectorball/shared';
 import { Button } from '../components/atoms/Button';
 import { Game } from '../components/organisms/Game';
 import { MainLayout } from '../components/templates/MainLayout';
+import { useLeaveMatch } from '../hooks/useLeaveMatch';
 import { useMatch } from '../hooks/useMatch';
 import type { Session } from '../hooks/useSession';
+import type { ApiClient } from '../services/apiClient';
 
 export type MatchPageProps = {
   readonly session: Session;
+  readonly api: ApiClient;
   readonly matchId: string;
   readonly onLeave: () => void;
 };
 
-export const MatchPage = ({ session, matchId, onLeave }: MatchPageProps) => {
+export const MatchPage = ({ session, api, matchId, onLeave }: MatchPageProps) => {
   const match = useMatch(session.token, matchId);
   const { view, status, replayItem } = match;
+  const leave = useLeaveMatch({
+    token: session.token,
+    matchId,
+    status: view?.status ?? null,
+    api,
+    onLeave,
+  });
   const myTeam = view === null ? null : teamOf(view, session.player.id);
 
   const content = () => {
@@ -42,7 +52,7 @@ export const MatchPage = ({ session, matchId, onLeave }: MatchPageProps) => {
     <MainLayout title="Sectorball">
       <div className="match-page">
         <div className="match-page__bar">
-          <Button variant="secondary" onClick={onLeave}>
+          <Button variant="secondary" onClick={leave}>
             Kilépés
           </Button>
           {match.error !== null && (

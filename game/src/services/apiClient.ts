@@ -53,6 +53,9 @@ export const createApiClient = (fetchFn: typeof fetch = (...args) => fetch(...ar
     createMatch: (token: string) => request<MatchView>('/api/matches', 'POST', token),
     joinMatch: (token: string, id: string) =>
       request<MatchView>(`/api/matches/${encodeURIComponent(id)}/join`, 'POST', token),
+    cancelMatch: async (token: string, id: string): Promise<void> => {
+      await request<undefined>(`/api/matches/${encodeURIComponent(id)}`, 'DELETE', token);
+    },
   };
 };
 
